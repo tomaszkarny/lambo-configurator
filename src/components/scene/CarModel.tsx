@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useGLTF, useAnimations, Text } from '@react-three/drei';
+import { useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import { useConfigStore } from '@/store/useConfigStore';
 import { getMeshGroup } from '@/lib/mesh-classifier';
@@ -10,7 +10,7 @@ import { interactivePartDefs, allInteractiveParts } from '@/config/interactive-p
 import type { InteractivePart } from '@/types/configurator';
 import { useFrame, useThree } from '@react-three/fiber';
 
-const MODEL_PATH = '/models/lambo.glb';
+const MODEL_PATH = '/models/lambo_clean.glb';
 
 /** Find a part node by name prefix. Prefers group/Object3D over Mesh. */
 function findPartNode(root: THREE.Object3D, namePrefix: string): THREE.Object3D | null {
@@ -74,7 +74,10 @@ export default function CarModel() {
   useEffect(() => { colors.current.body.target.set(bodyColor); invalidate(); }, [bodyColor, invalidate]);
   useEffect(() => { colors.current.wheels.target.set(wheelColor); invalidate(); }, [wheelColor, invalidate]);
   useEffect(() => { colors.current.lights.target.set(lightColor); invalidate(); }, [lightColor, invalidate]);
-  useEffect(() => { colors.current.accents.target.set(accentColor); invalidate(); }, [accentColor, invalidate]);
+  useEffect(() => {
+    colors.current.accents.target.set(accentColor);
+    invalidate();
+  }, [accentColor, invalidate]);
   useEffect(() => { colors.current.windows.target.set(windowTint); invalidate(); }, [windowTint, invalidate]);
 
   // Update interactive part refs when store changes
@@ -341,40 +344,6 @@ export default function CarModel() {
   return (
     <group>
       <primitive object={scene} />
-      {/* Right skirt text */}
-      <Text
-        position={[1.02, 0.32, 0.3]}
-        rotation={[0, -Math.PI / 2, 0]}
-        fontSize={0.06}
-        letterSpacing={0.15}
-        anchorX="center"
-        anchorY="middle"
-      >
-        TERZO MILLENNIO
-        <meshStandardMaterial
-          color={accentColor}
-          emissive={accentColor}
-          emissiveIntensity={2.0}
-          toneMapped={false}
-        />
-      </Text>
-      {/* Left skirt text (mirrored) */}
-      <Text
-        position={[-1.02, 0.32, 0.3]}
-        rotation={[0, Math.PI / 2, 0]}
-        fontSize={0.06}
-        letterSpacing={0.15}
-        anchorX="center"
-        anchorY="middle"
-      >
-        TERZO MILLENNIO
-        <meshStandardMaterial
-          color={accentColor}
-          emissive={accentColor}
-          emissiveIntensity={2.0}
-          toneMapped={false}
-        />
-      </Text>
     </group>
   );
 }

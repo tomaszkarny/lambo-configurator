@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lamborghini Terzo Millennio | 3D Configurator",
+  title: "Lamborghini Terzo Millennio | 3D Configurator & Experience",
   description:
-    "Interactive 3D configurator for the Lamborghini Terzo Millennio concept car. Customize body color, wheels, neon lights, and materials in real-time.",
+    "Explore the Lamborghini Terzo Millennio in an immersive 3D experience. Scroll through design features, discover specifications, and customize body color, wheels, neon lights, and materials in real-time.",
   keywords: [
     "Lamborghini",
     "Terzo Millennio",
@@ -23,7 +23,14 @@ export const metadata: Metadata = {
     "car configurator",
     "WebGL",
     "Three.js",
+    "electric supercar",
+    "concept car",
   ],
+  openGraph: {
+    title: "Lamborghini Terzo Millennio | 3D Experience",
+    description: "Immersive 3D configurator for the Lamborghini Terzo Millennio concept car.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -34,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0a0a0a] text-white overflow-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0a0a0a] text-white`}
       >
         {children}
       </body>

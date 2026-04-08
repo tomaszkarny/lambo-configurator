@@ -24,6 +24,12 @@ export const materialToPartGroup: Record<string, PartGroup> = {
   'Vitres': 'windows',
 };
 
+/**
+ * Maps GLTF material names to internal (non-UI) groups.
+ * These materials get custom shared materials but no UI tab.
+ */
+export const materialToInternalGroup: Record<string, string> = {};
+
 /** Materials that should never be modified */
 export const immutableMaterials = new Set([
   'CARBONE',
