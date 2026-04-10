@@ -1,17 +1,6 @@
-import type { ConfigState } from '@/types/configurator';
+import type { ConfigState, MaterialType } from '@/types/configurator';
 
-const URL_KEYS: Record<string, keyof ConfigState> = {
-  bc: 'bodyColor',
-  bm: 'bodyMaterial',
-  wc: 'wheelColor',
-  wm: 'wheelMaterial',
-  lc: 'lightColor',
-  li: 'lightIntensity',
-  ac: 'accentColor',
-  wt: 'windowTint',
-  wo: 'windowOpacity',
-  wi: 'wingsOpen',
-};
+const VALID_MATERIALS = new Set<MaterialType>(['glossy', 'matte', 'metallic', 'satin', 'carbon']);
 
 export function serializeConfig(state: Partial<ConfigState>): string {
   const params = new URLSearchParams();
@@ -38,19 +27,22 @@ export function deserializeConfig(search: string): Partial<ConfigState> {
   if (bc) config.bodyColor = `#${bc}`;
 
   const bm = params.get('bm');
-  if (bm) config.bodyMaterial = bm as ConfigState['bodyMaterial'];
+  if (bm && VALID_MATERIALS.has(bm as MaterialType)) config.bodyMaterial = bm as MaterialType;
 
   const wc = params.get('wc');
   if (wc) config.wheelColor = `#${wc}`;
 
   const wm = params.get('wm');
-  if (wm) config.wheelMaterial = wm as ConfigState['wheelMaterial'];
+  if (wm && VALID_MATERIALS.has(wm as MaterialType)) config.wheelMaterial = wm as MaterialType;
 
   const lc = params.get('lc');
   if (lc) config.lightColor = `#${lc}`;
 
   const li = params.get('li');
-  if (li) config.lightIntensity = parseFloat(li);
+  if (li) {
+    const val = parseFloat(li);
+    if (!isNaN(val) && val >= 0 && val <= 10) config.lightIntensity = val;
+  }
 
   const ac = params.get('ac');
   if (ac) config.accentColor = `#${ac}`;
@@ -59,10 +51,14 @@ export function deserializeConfig(search: string): Partial<ConfigState> {
   if (wt) config.windowTint = `#${wt}`;
 
   const wo = params.get('wo');
-  if (wo) config.windowOpacity = parseFloat(wo);
+  if (wo) {
+    const val = parseFloat(wo);
+    if (!isNaN(val) && val >= 0.05 && val <= 0.8) config.windowOpacity = val;
+  }
 
   const wi = params.get('wi');
-  if (wi === '1') config.wingsOpen = true;
+  if (wi === 'true' || wi === '1') config.wingsOpen = true;
+  else if (wi === 'false') config.wingsOpen = false;
 
   return config;
 }

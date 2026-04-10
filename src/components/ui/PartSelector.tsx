@@ -20,7 +20,7 @@ export default function PartSelector() {
             px-3 py-1.5 text-[11px] tracking-wider uppercase rounded-sm transition-all duration-200
             ${activePart === part
               ? 'bg-white/10 text-white border border-white/20'
-              : 'text-white/40 hover:text-white/60 border border-transparent'
+              : 'text-white/55 hover:text-white/60 border border-transparent'
             }
           `}
           aria-pressed={activePart === part}

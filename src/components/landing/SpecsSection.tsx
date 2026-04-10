@@ -27,14 +27,14 @@ export default function SpecsSection() {
         >
           {specs.map((spec) => (
             <div key={spec.label} className="text-center md:text-left">
-              <p className="text-[10px] tracking-[0.3em] uppercase text-white/30 mb-2">
+              <p className="text-[11px] tracking-[0.3em] uppercase text-white/55 mb-2">
                 {spec.label}
               </p>
               <p className="text-3xl md:text-4xl font-light text-white tracking-tight">
                 {spec.value}
               </p>
               {spec.unit && (
-                <p className="mt-1 text-xs tracking-widest uppercase text-white/40">
+                <p className="mt-1 text-xs tracking-widest uppercase text-white/50">
                   {spec.unit}
                 </p>
               )}

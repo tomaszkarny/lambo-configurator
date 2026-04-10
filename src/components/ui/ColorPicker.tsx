@@ -68,7 +68,7 @@ export default function ColorPicker() {
 
   return (
     <div>
-      <p className="text-[10px] tracking-widest text-white/30 uppercase mb-3">Color</p>
+      <p className="text-[10px] tracking-widest text-white/50 uppercase mb-3">Color</p>
       <div className="flex flex-wrap gap-2">
         {colors.map((swatch) => {
           const isActive = currentColor.toLowerCase() === swatch.hex.toLowerCase();

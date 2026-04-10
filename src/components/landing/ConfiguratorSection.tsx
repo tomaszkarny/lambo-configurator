@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ConfigPanel from '@/components/ui/ConfigPanel';
-import Header from '@/components/ui/Header';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useScrollStore } from '@/store/useScrollStore';
+import { scrollToProgress } from '@/lib/scroll-nav';
 
 export default function ConfiguratorSection() {
   const { isMobile } = useResponsive();
@@ -16,13 +16,9 @@ export default function ConfiguratorSection() {
     if (!hasInteracted) setHasInteracted(true);
   };
 
-  const handleContinue = () => {
-    // Scroll to next section (specs)
-    const specsSection = document.getElementById('specs');
-    if (specsSection) {
-      specsSection.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  // 0.96 lands in the middle of the specs zone (0.944-0.975), clear of the
+  // configurator boundary so isConfigurator flips to false cleanly.
+  const handleContinue = () => scrollToProgress(0.96);
 
   return (
     <section
@@ -47,12 +43,12 @@ export default function ConfiguratorSection() {
           >
             <div className="text-center">
               <h2
-                className="font-extralight uppercase tracking-[0.2em] text-white/20"
+                className="font-extralight uppercase tracking-[0.2em] text-white/50"
                 style={{ fontSize: 'clamp(2rem, 6vw, 5rem)' }}
               >
                 CONFIGURE
               </h2>
-              <p className="mt-4 text-xs tracking-[0.3em] uppercase text-white/20">
+              <p className="mt-4 text-xs tracking-[0.3em] uppercase text-white/50">
                 Tap to begin customizing
               </p>
             </div>
@@ -60,13 +56,9 @@ export default function ConfiguratorSection() {
         )}
       </AnimatePresence>
 
-      {/* Header + ConfigPanel (only show when section is active) */}
-      {isConfigurator && (
-        <>
-          <Header />
-          <ConfigPanel isMobile={isMobile} />
-        </>
-      )}
+      {/* ConfigPanel (only show when section is active).
+          Global header is rendered by LandingPage (NavHeader). */}
+      {isConfigurator && <ConfigPanel isMobile={isMobile} />}
 
       {/* Continue scrolling button */}
       {isConfigurator && hasInteracted && (
@@ -78,7 +70,7 @@ export default function ConfiguratorSection() {
         >
           <button
             onClick={handleContinue}
-            className="group flex flex-col items-center gap-2 text-white/30 hover:text-white/60 transition-colors cursor-pointer"
+            className="group flex flex-col items-center gap-2 text-white/50 hover:text-white/60 transition-colors cursor-pointer"
           >
             <span className="text-[10px] tracking-[0.3em] uppercase">
               Continue Scrolling
@@ -88,6 +80,7 @@ export default function ConfiguratorSection() {
               height="20"
               viewBox="0 0 24 24"
               fill="none"
+              aria-hidden="true"
               className="text-current"
               animate={{ y: [0, 4, 0] }}
               transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}

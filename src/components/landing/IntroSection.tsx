@@ -16,7 +16,7 @@ export default function IntroSection() {
 
         {/* Description */}
         <RevealText delay={0.2}>
-          <p className="mt-6 max-w-2xl mx-auto text-lg text-white/60 font-light leading-relaxed">
+          <p className="mt-6 max-w-2xl mx-auto text-lg text-white/70 font-light leading-relaxed">
             {description}
           </p>
         </RevealText>

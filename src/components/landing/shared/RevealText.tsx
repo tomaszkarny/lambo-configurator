@@ -7,6 +7,7 @@ import {
   useRef,
 } from 'react';
 import { motion, useInView, type Variants } from 'framer-motion';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface RevealTextProps {
   children: ReactNode;
@@ -26,11 +27,6 @@ const directionOffset: Record<string, { x: number; y: number }> = {
   right: { x: -40, y: 0 },
 };
 
-const prefersReducedMotion =
-  typeof window !== 'undefined'
-    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    : false;
-
 export default function RevealText({
   children,
   className,
@@ -41,6 +37,7 @@ export default function RevealText({
   staggerDelay = 0.1,
   as: Tag = 'div',
 }: RevealTextProps) {
+  const prefersReducedMotion = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once, margin: '-10%' });
 

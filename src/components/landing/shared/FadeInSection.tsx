@@ -2,6 +2,7 @@
 
 import { type ReactNode, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 interface FadeInSectionProps {
   children: ReactNode;
@@ -10,17 +11,13 @@ interface FadeInSectionProps {
   threshold?: number;
 }
 
-const prefersReducedMotion =
-  typeof window !== 'undefined'
-    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    : false;
-
 export default function FadeInSection({
   children,
   className,
   delay = 0,
   threshold = 0.1,
 }: FadeInSectionProps) {
+  const prefersReducedMotion = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, amount: threshold });
 

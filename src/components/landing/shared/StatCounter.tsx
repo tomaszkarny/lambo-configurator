@@ -72,7 +72,7 @@ export default function StatCounter({
           <span className="text-white/60">{suffix}</span>
         )}
       </p>
-      <p className="mt-2 text-xs tracking-widest uppercase text-white/40">
+      <p className="mt-2 text-xs tracking-widest uppercase text-white/55">
         {label}
       </p>
     </div>

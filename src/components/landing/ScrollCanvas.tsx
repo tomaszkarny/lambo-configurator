@@ -39,11 +39,11 @@ export default function ScrollCanvas() {
           fov: 35,
           near: 0.1,
           far: 100,
-          position: [8, 5, 12],
+          position: [3.5, 1.8, 5],
         }}
         dpr={isMobile ? [1, 1] : [1, 1.5]}
         gl={{
-          alpha: true,
+          alpha: false,
           antialias: false,
           preserveDrawingBuffer: true,
           powerPreference: 'high-performance',

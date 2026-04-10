@@ -22,7 +22,7 @@ export default function SectionHeading({
   return (
     <RevealText className={`${alignment} ${className ?? ''}`}>
       {subtitle && (
-        <p className="mb-3 text-[10px] tracking-[0.3em] uppercase text-white/30">
+        <p className="mb-3 text-[11px] tracking-[0.3em] uppercase text-white/55">
           {subtitle}
         </p>
       )}

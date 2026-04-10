@@ -1,11 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ScrollTrigger } from '@/lib/gsap-setup';
 import { useScrollStore } from '@/store/useScrollStore';
-
-gsap.registerPlugin(ScrollTrigger);
 
 export function useScrollProgress() {
   useEffect(() => {
@@ -17,22 +14,22 @@ export function useScrollProgress() {
       onUpdate: (self) => {
         useScrollStore.getState().setScrollProgress(self.progress);
 
-        // Section boundaries:
-        // 0: Hero      (0.00 - 0.18)
-        // 1: Intro     (0.18 - 0.25)
-        // 2: Design    (0.25 - 0.50)
-        // 3: Color     (0.50 - 0.60)
-        // 4: Config    (0.60 - 0.75)
-        // 5: Specs     (0.75 - 0.90)
-        // 6: Footer    (0.90 - 1.00)
+        // Section boundaries (from landing-content.ts heights, 900vh scroll range):
+        // 0: Hero      (0.000 - 0.222)
+        // 1: Intro     (0.222 - 0.333)
+        // 2: Design    (0.333 - 0.667)
+        // 3: Color     (0.667 - 0.833)
+        // 4: Config    (0.833 - 0.944)
+        // 5: Specs     (0.944 - ~1.0)
+        // 6: Footer    (~1.0)
         const p = self.progress;
         let section = 0;
-        if (p > 0.90) section = 6;
-        else if (p > 0.75) section = 5;
-        else if (p > 0.60) section = 4;
-        else if (p > 0.50) section = 3;
-        else if (p > 0.25) section = 2;
-        else if (p > 0.18) section = 1;
+        if (p > 0.97) section = 6;
+        else if (p > 0.944) section = 5;
+        else if (p > 0.833) section = 4;
+        else if (p > 0.667) section = 3;
+        else if (p > 0.333) section = 2;
+        else if (p > 0.222) section = 1;
 
         useScrollStore.getState().setActiveSection(section);
         useScrollStore.getState().setIsConfigurator(section === 4);

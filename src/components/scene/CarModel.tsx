@@ -46,20 +46,17 @@ export default function CarModel() {
   const windowTint = useConfigStore((s) => s.windowTint);
   const windowOpacity = useConfigStore((s) => s.windowOpacity);
   const wingsOpen = useConfigStore((s) => s.wingsOpen);
-  const partStates = useConfigStore((s) => s.partStates);
-  const explodeAmount = useConfigStore((s) => s.explodeAmount);
-
   // Shared materials - ONE material per group instead of one per mesh
   const materialsMap = useRef<Map<string, THREE.Material>>(new Map());
   const initialized = useRef(false);
+  // Track original materials so cleanup can restore them (StrictMode safety)
+  const originalMaterials = useRef<Map<THREE.Mesh, THREE.Material>>(new Map());
 
   // Interactive parts refs
   const partNodesRef = useRef<Map<InteractivePart, THREE.Object3D>>(new Map());
   const partOriginalsRef = useRef<Map<InteractivePart, THREE.Vector3>>(new Map());
   const toggleProgressRef = useRef<Map<InteractivePart, number>>(new Map());
   const explodeProgressRef = useRef(0);
-  const partStatesRef = useRef(partStates);
-  const explodeAmountRef = useRef(explodeAmount);
 
   // Color refs for smooth lerp - start with current store values
   const colors = useRef({
@@ -80,10 +77,6 @@ export default function CarModel() {
   }, [accentColor, invalidate]);
   useEffect(() => { colors.current.windows.target.set(windowTint); invalidate(); }, [windowTint, invalidate]);
 
-  // Update interactive part refs when store changes
-  useEffect(() => { partStatesRef.current = partStates; invalidate(); }, [partStates, invalidate]);
-  useEffect(() => { explodeAmountRef.current = explodeAmount; invalidate(); }, [explodeAmount, invalidate]);
-
   // Initial material setup - traverse once, create ONE shared material per group
   useEffect(() => {
     if (initialized.current) return;
@@ -91,50 +84,33 @@ export default function CarModel() {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
     const map = new Map<string, THREE.Material>();
 
-    scene.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-      const mat = child.material as THREE.MeshStandardMaterial;
-      if (!mat?.name) return;
-
-      const group = getMeshGroup(mat.name);
-      if (!group) return;
-
-      // Create shared material only once per group
-      if (!map.has(group)) {
-        map.set(group, createMaterialForGroup(group, store, isMobile));
-      }
-      child.material = map.get(group)!;
-    });
-
-    materialsMap.current = map;
-    initialized.current = true;
-
-    // Hide custom paint overlay nodes (contain "63" racing number & text decals from original model)
-    const decalNodes = [
+    // Hidden decal node names (contain "63" racing number & text decals from original model)
+    const decalNodes = new Set([
       'chassis_carpaint_custom01_LOD2_46',
       'detach_trunk_50_carpaint_custom02_LOD2_82',
       'detach_wing_10_carpaint_custom03_LOD2_0',
       'chassis_carpaint_normal_LOD2_48',
-    ];
-    for (const name of decalNodes) {
-      const node = scene.getObjectByName(name);
-      if (node) node.visible = false;
-    }
+    ]);
 
-    // Hide small overlay meshes with Material.001 (gray text/number decals baked into model)
+    // Single traversal: assign shared materials, hide decals, hide Material.001, hide Orange on skirts
     scene.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) return;
-      const mat = child.material as THREE.MeshStandardMaterial;
-      if (mat?.name === 'Material.001') {
+      // Hide decal nodes by name
+      if (decalNodes.has(child.name)) {
         child.visible = false;
       }
-    });
 
-    // Hide Orange material meshes on skirts (contain baked "RIMUOVERE" text)
-    scene.traverse((child) => {
       if (!(child instanceof THREE.Mesh)) return;
       const mat = child.material as THREE.MeshStandardMaterial;
-      if (mat?.name === 'Orange') {
+      if (!mat?.name) return;
+
+      // Hide gray text/number decals (Material.001)
+      if (mat.name === 'Material.001') {
+        child.visible = false;
+        return;
+      }
+
+      // Hide Orange material meshes on skirts (contain baked "RIMUOVERE" text)
+      if (mat.name === 'Orange') {
         let node: THREE.Object3D | null = child;
         while (node) {
           if (node.name.toLowerCase().includes('skirt')) {
@@ -144,7 +120,22 @@ export default function CarModel() {
           node = node.parent;
         }
       }
+
+      // Assign shared material per group
+      const group = getMeshGroup(mat.name);
+      if (!group) return;
+      // Preserve original GLTF material for StrictMode cleanup/re-init
+      if (!originalMaterials.current.has(child)) {
+        originalMaterials.current.set(child, mat);
+      }
+      if (!map.has(group)) {
+        map.set(group, createMaterialForGroup(group, store, isMobile));
+      }
+      child.material = map.get(group)!;
     });
+
+    materialsMap.current = map;
+    initialized.current = true;
 
     // Discover interactive part nodes
     const nodes = new Map<InteractivePart, THREE.Object3D>();
@@ -170,6 +161,20 @@ export default function CarModel() {
     colors.current.windows.current.set(store.windowTint);
 
     invalidate();
+
+    return () => {
+      // Restore original GLTF materials before disposing shared ones.
+      // This ensures re-initialization (e.g. React StrictMode double-mount)
+      // can read correct material names from the scene graph.
+      for (const [mesh, origMat] of originalMaterials.current) {
+        mesh.material = origMat;
+      }
+      for (const mat of materialsMap.current.values()) {
+        mat.dispose();
+      }
+      materialsMap.current.clear();
+      initialized.current = false;
+    };
   }, [scene, invalidate]);
 
   // Material preset changes (roughness/metalness/clearcoat)
@@ -275,8 +280,8 @@ export default function CarModel() {
     }
 
     // Interactive part transform animation
-    const ps = partStatesRef.current;
-    const ea = explodeAmountRef.current;
+    const ps = useConfigStore.getState().partStates;
+    const ea = useConfigStore.getState().explodeAmount;
 
     // Lerp global explode progress
     let explodeP = explodeProgressRef.current;

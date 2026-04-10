@@ -1,21 +1,25 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConfigStore } from '@/store/useConfigStore';
 import { serializeConfig } from '@/lib/url-state';
 
 export default function ShareButton() {
   const [copied, setCopied] = useState(false);
-  const store = useConfigStore();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const handleShare = useCallback(() => {
+    const store = useConfigStore.getState();
     const query = serializeConfig(store);
     const url = `${window.location.origin}${window.location.pathname}?${query}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setCopied(false), 2000);
     });
-  }, [store]);
+  }, []);
+
+  useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const handleScreenshot = useCallback(() => {
     const canvas = document.querySelector('canvas');

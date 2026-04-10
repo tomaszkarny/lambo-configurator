@@ -25,7 +25,7 @@ export default function ScrollIndicator() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <span className="text-[8px] tracking-[0.3em] uppercase text-white/20 select-none">
+          <span className="text-[11px] tracking-[0.3em] uppercase text-white/40 select-none">
             Scroll to explore
           </span>
 
@@ -43,6 +43,7 @@ export default function ScrollIndicator() {
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
               className="text-white/40"
             >
               <path

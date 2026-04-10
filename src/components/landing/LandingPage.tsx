@@ -8,7 +8,9 @@ import { sections } from '@/config/landing-content';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useConfigStore } from '@/store/useConfigStore';
 import LoadingScreen from '@/components/ui/LoadingScreen';
+import NavHeader from '@/components/ui/NavHeader';
 import ScrollProgressBar from './ScrollProgressBar';
+import FinalReveal from './FinalReveal';
 
 import HeroSection from './HeroSection';
 import IntroSection from './IntroSection';
@@ -32,6 +34,17 @@ const sectionComponents: Record<string, React.ComponentType> = {
   footer: FooterSection,
 };
 
+// Map section IDs to accessible labels
+const sectionLabels: Record<string, string> = {
+  hero: 'Hero',
+  intro: 'Introduction',
+  design: 'Design Features',
+  'color-showcase': 'Color Showcase',
+  configurator: 'Configurator',
+  specs: 'Specifications',
+  footer: 'Footer',
+};
+
 export default function LandingPage() {
   useSmoothScroll();
   useScrollProgress();
@@ -45,40 +58,45 @@ export default function LandingPage() {
   return (
     <>
       <LoadingScreen />
+      <NavHeader />
       <ScrollProgressBar />
+      <FinalReveal />
 
       <div id="page-wrapper" style={{ position: 'relative' }}>
-        {/* Canvas in sticky container - scrolls with content but stays on screen */}
-        <div style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 0 }}>
-          <ScrollCanvas />
-        </div>
+        <main>
+          {/* Canvas in sticky container - scrolls with content but stays on screen */}
+          <div style={{ position: 'sticky', top: 0, height: '100vh', zIndex: 0 }}>
+            <ScrollCanvas />
+          </div>
 
-        {/* Content overlay ON TOP of the sticky canvas */}
-        <div
-          id="scroll-content"
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            marginTop: '-100vh',
-            pointerEvents: 'none',
-          }}
-        >
-          {sections.map((section) => {
-            const Component = sectionComponents[section.id];
-            const height = (isMobile && section.mobileHeight) || section.height;
+          {/* Content overlay ON TOP of the sticky canvas */}
+          <div
+            id="scroll-content"
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              marginTop: '-100vh',
+              pointerEvents: 'none',
+            }}
+          >
+            {sections.map((section) => {
+              const Component = sectionComponents[section.id];
+              const height = (isMobile && section.mobileHeight) || section.height;
 
-            return (
-              <section
-                key={section.id}
-                id={section.id}
-                style={{ height }}
-                className="relative w-full"
-              >
-                {Component && <Component />}
-              </section>
-            );
-          })}
-        </div>
+              return (
+                <section
+                  key={section.id}
+                  id={section.id}
+                  style={{ height }}
+                  className="relative w-full"
+                  aria-label={sectionLabels[section.id]}
+                >
+                  {Component && <Component />}
+                </section>
+              );
+            })}
+          </div>
+        </main>
       </div>
     </>
   );

@@ -14,7 +14,7 @@ export default function InteractiveControls() {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[10px] tracking-widest text-white/30 uppercase">
+      <p className="text-[10px] tracking-widest text-white/50 uppercase">
         Interactive Parts
       </p>
 
@@ -28,7 +28,7 @@ export default function InteractiveControls() {
               key={group.label}
               className="flex items-center justify-between cursor-pointer group"
             >
-              <span className="text-[10px] tracking-widest text-white/30 uppercase">
+              <span className="text-[10px] tracking-widest text-white/50 uppercase">
                 {group.label}
               </span>
               <button
@@ -60,7 +60,7 @@ export default function InteractiveControls() {
 
       {/* Explode slider */}
       <div>
-        <p className="text-[10px] tracking-widest text-white/30 uppercase mb-2">
+        <p className="text-[10px] tracking-widest text-white/50 uppercase mb-2">
           Explode: {Math.round(explodeAmount * 100)}%
         </p>
         <input
@@ -79,7 +79,7 @@ export default function InteractiveControls() {
       {hasAnyActive && (
         <button
           onClick={resetInteractive}
-          className="text-[10px] tracking-widest text-white/30 uppercase
+          className="text-[10px] tracking-widest text-white/50 uppercase
             hover:text-[#ff6600] transition-colors duration-200"
         >
           Reset All

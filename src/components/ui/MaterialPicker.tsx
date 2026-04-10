@@ -21,7 +21,7 @@ export default function MaterialPicker() {
 
   return (
     <div>
-      <p className="text-[10px] tracking-widest text-white/30 uppercase mb-3">Material</p>
+      <p className="text-[10px] tracking-widest text-white/50 uppercase mb-3">Material</p>
       <div className="grid grid-cols-5 gap-1.5">
         {materialTypes.map((type) => {
           const preset = materialPresets[type];

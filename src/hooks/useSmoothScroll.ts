@@ -2,10 +2,8 @@
 
 import { useEffect } from 'react';
 import Lenis from 'lenis';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
+import { gsap, ScrollTrigger } from '@/lib/gsap-setup';
+import { setLenis } from '@/lib/lenis-instance';
 
 export function useSmoothScroll() {
   useEffect(() => {
@@ -15,6 +13,9 @@ export function useSmoothScroll() {
       orientation: 'vertical',
       smoothWheel: true,
     });
+
+    // Expose to the shared singleton so navigation helpers can call lenis.scrollTo
+    setLenis(lenis);
 
     // Sync Lenis scroll events with GSAP ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
@@ -28,6 +29,7 @@ export function useSmoothScroll() {
 
     return () => {
       gsap.ticker.remove(rafCallback);
+      setLenis(null);
       lenis.destroy();
     };
   }, []);

@@ -87,10 +87,10 @@ export default function ColorShowcaseSection() {
               className="relative flex items-center justify-center"
             >
               <div
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
                   i === activeIndex
-                    ? 'scale-150 ring-1 ring-white/50 ring-offset-1 ring-offset-black'
-                    : 'opacity-40'
+                    ? 'scale-150 ring-1 ring-white/50 ring-offset-2 ring-offset-black'
+                    : 'opacity-50'
                 }`}
                 style={{ backgroundColor: color.hex }}
               />
@@ -99,7 +99,7 @@ export default function ColorShowcaseSection() {
         </div>
 
         {/* Section label */}
-        <p className="mt-6 text-[10px] tracking-[0.3em] uppercase text-white/20">
+        <p className="mt-6 text-[11px] tracking-[0.3em] uppercase text-white/50">
           Available Colors
         </p>
       </div>

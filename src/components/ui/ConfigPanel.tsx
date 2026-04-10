@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PartSelector from './PartSelector';
 import ColorPicker from './ColorPicker';
@@ -10,6 +10,61 @@ import ShareButton from './ShareButton';
 import InteractiveControls from './InteractiveControls';
 import { useConfigStore } from '@/store/useConfigStore';
 import { configPresets } from '@/config/defaults';
+
+function CollapsibleSection({
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between py-1 group cursor-pointer"
+        aria-expanded={open}
+      >
+        <span className="text-[10px] tracking-widest text-white/55 uppercase group-hover:text-white/60 transition-colors">
+          {title}
+        </span>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          aria-hidden="true"
+          className={`text-white/50 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        >
+          <path
+            d="M3 5L6 8L9 5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.4, 0, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="pt-3">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function ConfigPanel({ isMobile }: { isMobile: boolean }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -25,7 +80,9 @@ export default function ConfigPanel({ isMobile }: { isMobile: boolean }) {
   const setWindowOpacity = useConfigStore((s) => s.setWindowOpacity);
 
   const panelContent = (
-    <div className="flex flex-col gap-5 p-5">
+    <div className="flex flex-col gap-4 p-5">
+      {/* === PRIMARY CONTROLS (always visible) === */}
+
       {/* Part tabs */}
       <PartSelector />
 
@@ -38,7 +95,7 @@ export default function ConfigPanel({ isMobile }: { isMobile: boolean }) {
       {/* Intensity slider for lights */}
       {activePart === 'lights' && (
         <div>
-          <p className="text-[10px] tracking-widest text-white/30 uppercase mb-2">
+          <p className="text-[10px] tracking-widest text-white/50 uppercase mb-2">
             Intensity: {lightIntensity.toFixed(1)}
           </p>
           <input
@@ -57,7 +114,7 @@ export default function ConfigPanel({ isMobile }: { isMobile: boolean }) {
       {/* Opacity slider for windows */}
       {activePart === 'windows' && (
         <div>
-          <p className="text-[10px] tracking-widest text-white/30 uppercase mb-2">
+          <p className="text-[10px] tracking-widest text-white/50 uppercase mb-2">
             Opacity: {Math.round(windowOpacity * 100)}%
           </p>
           <input
@@ -76,62 +133,65 @@ export default function ConfigPanel({ isMobile }: { isMobile: boolean }) {
       {/* Divider */}
       <div className="h-px bg-white/5" />
 
-      {/* Camera presets */}
-      <CameraPresets />
+      {/* === COLLAPSIBLE SECTIONS === */}
 
-      {/* Divider */}
-      <div className="h-px bg-white/5" />
+      {/* Camera & View */}
+      <CollapsibleSection title="Camera & View">
+        <div className="flex flex-col gap-4">
+          <CameraPresets />
 
-      {/* Toggles */}
-      <div className="flex flex-col gap-2">
-        <label className="flex items-center justify-between cursor-pointer group">
-          <span className="text-[10px] tracking-widest text-white/30 uppercase">Auto Rotate</span>
-          <button
-            onClick={() => setAutoRotate(!autoRotate)}
-            className={`
-              w-8 h-4 rounded-full transition-all duration-200 relative
-              ${autoRotate ? 'bg-[#ff6600]/60' : 'bg-white/10'}
-            `}
-            role="switch"
-            aria-checked={autoRotate}
-          >
-            <span className={`
-              absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-200
-              ${autoRotate ? 'left-4' : 'left-0.5'}
-            `} />
-          </button>
-        </label>
-        <label className="flex items-center justify-between cursor-pointer group">
-          <span className="text-[10px] tracking-widest text-white/30 uppercase">Aero Wings</span>
-          <button
-            onClick={() => setWingsOpen(!wingsOpen)}
-            className={`
-              w-8 h-4 rounded-full transition-all duration-200 relative
-              ${wingsOpen ? 'bg-[#ff6600]/60' : 'bg-white/10'}
-            `}
-            role="switch"
-            aria-checked={wingsOpen}
-          >
-            <span className={`
-              absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-200
-              ${wingsOpen ? 'left-4' : 'left-0.5'}
-            `} />
-          </button>
-        </label>
-      </div>
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center justify-between cursor-pointer group">
+              <span className="text-[10px] tracking-widest text-white/50 uppercase">Auto Rotate</span>
+              <button
+                onClick={() => setAutoRotate(!autoRotate)}
+                className={`
+                  w-8 h-4 rounded-full transition-all duration-200 relative
+                  ${autoRotate ? 'bg-[#ff6600]/60' : 'bg-white/10'}
+                `}
+                role="switch"
+                aria-checked={autoRotate}
+              >
+                <span className={`
+                  absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-200
+                  ${autoRotate ? 'left-4' : 'left-0.5'}
+                `} />
+              </button>
+            </label>
+            <label className="flex items-center justify-between cursor-pointer group">
+              <span className="text-[10px] tracking-widest text-white/50 uppercase">Aero Wings</span>
+              <button
+                onClick={() => setWingsOpen(!wingsOpen)}
+                className={`
+                  w-8 h-4 rounded-full transition-all duration-200 relative
+                  ${wingsOpen ? 'bg-[#ff6600]/60' : 'bg-white/10'}
+                `}
+                role="switch"
+                aria-checked={wingsOpen}
+              >
+                <span className={`
+                  absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-200
+                  ${wingsOpen ? 'left-4' : 'left-0.5'}
+                `} />
+              </button>
+            </label>
+          </div>
+        </div>
+      </CollapsibleSection>
 
       {/* Divider */}
       <div className="h-px bg-white/5" />
 
       {/* Interactive Parts */}
-      <InteractiveControls />
+      <CollapsibleSection title="Interactive Parts">
+        <InteractiveControls />
+      </CollapsibleSection>
 
       {/* Divider */}
       <div className="h-px bg-white/5" />
 
       {/* Presets */}
-      <div>
-        <p className="text-[10px] tracking-widest text-white/30 uppercase mb-3">Presets</p>
+      <CollapsibleSection title="Presets">
         <div className="grid grid-cols-2 gap-1.5">
           {configPresets.map((preset) => (
             <button
@@ -144,13 +204,13 @@ export default function ConfigPanel({ isMobile }: { isMobile: boolean }) {
                 className="w-3 h-3 rounded-full border border-white/10"
                 style={{ backgroundColor: preset.bodyColor }}
               />
-              <span className="text-[10px] tracking-wider text-white/40 group-hover:text-white/60">
+              <span className="text-[10px] tracking-wider text-white/55 group-hover:text-white/60">
                 {preset.name}
               </span>
             </button>
           ))}
         </div>
-      </div>
+      </CollapsibleSection>
 
       {/* Divider */}
       <div className="h-px bg-white/5" />
@@ -185,12 +245,13 @@ export default function ConfigPanel({ isMobile }: { isMobile: boolean }) {
                 bg-[#111]/95 backdrop-blur-xl border-t border-white/5 rounded-t-2xl"
             >
               {/* Drag handle */}
-              <div
-                className="flex items-center justify-center py-3 cursor-pointer"
+              <button
+                className="flex items-center justify-center py-3 cursor-pointer w-full bg-transparent border-none appearance-none"
                 onClick={() => setDrawerOpen(false)}
+                aria-label="Close configuration panel"
               >
                 <div className="w-10 h-1 bg-white/20 rounded-full" />
-              </div>
+              </button>
               {panelContent}
             </motion.div>
           )}

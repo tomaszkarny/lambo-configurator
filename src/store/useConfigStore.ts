@@ -55,6 +55,8 @@ export const useConfigStore = create<ConfigStore>()(
 
       resetInteractive: () =>
         set({ partStates: { ...defaultPartStates }, explodeAmount: 0 }),
+
+      batchUpdate: (partial) => set(partial),
     }),
     {
       name: 'lambo-config',
@@ -68,7 +70,6 @@ export const useConfigStore = create<ConfigStore>()(
         accentColor: state.accentColor,
         windowTint: state.windowTint,
         windowOpacity: state.windowOpacity,
-        wingsOpen: state.wingsOpen,
       }),
     }
   )

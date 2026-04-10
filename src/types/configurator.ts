@@ -103,6 +103,7 @@ export interface ConfigActions {
   setPartOpen: (part: InteractivePart, open: boolean) => void;
   setExplodeAmount: (amount: number) => void;
   resetInteractive: () => void;
+  batchUpdate: (partial: Partial<ConfigState>) => void;
 }
 
 export type ConfigStore = ConfigState & ConfigActions;
