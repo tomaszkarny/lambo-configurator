@@ -59,7 +59,7 @@ export default function ScrollCanvas() {
         }}
         shadows
       >
-        <fogExp2 attach="fog" args={['#0a1622', 0.04]} />
+        <fogExp2 attach="fog" args={['#141210', 0.052]} />
         <Suspense fallback={null}>
           <CarModel />
           <GroundFog />

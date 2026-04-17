@@ -18,9 +18,25 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;
+  varying float vLift;
+  uniform float uTime;
   void main() {
     vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec3 pos = position;
+
+    // Layered wave displacement — after the -π/2 rotation on the mesh,
+    // local +Z becomes world +Y, so pushing pos.z lifts the vapor upward.
+    // Two sine layers at different frequencies + a slow fbm-like beat
+    // make the fog wisp up, not sit as a painted carpet.
+    float wave1 = sin(uv.x * 5.2 + uTime * 0.35) * 0.45;
+    float wave2 = sin(uv.y * 4.1 - uTime * 0.28) * 0.38;
+    float wave3 = sin((uv.x + uv.y) * 3.1 + uTime * 0.19) * 0.3;
+    float lift = wave1 + wave2 + wave3;
+
+    pos.z += lift;
+    vLift = lift;
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
   }
 `;
 
@@ -31,6 +47,7 @@ const fragmentShader = /* glsl */ `
   uniform vec3 uTintOuter;
   uniform float uOpacity;
   varying vec2 vUv;
+  varying float vLift;
 
   float hash(vec2 p) {
     p = fract(p * vec2(443.897, 441.423));
@@ -76,11 +93,16 @@ const fragmentShader = /* glsl */ `
     // Car hole — small clear disc in the middle so auto doesn't drown
     float carHole = smoothstep(0.045, 0.13, length(centered));
 
-    float alpha = density * edgeFade * carHole * uOpacity;
+    // Lifted crests get a brightness boost — where the wisp rises it
+    // catches more light, mimicking real vapor illumination.
+    float liftBoost = smoothstep(-0.3, 0.8, vLift) * 0.35 + 0.85;
+
+    float alpha = density * edgeFade * carHole * uOpacity * liftBoost;
     if (alpha < 0.004) discard;
 
     // Steam: brighter and cooler than the heavy smoke puffs above.
     vec3 col = mix(uTintOuter, uTintInner, density);
+    col *= liftBoost;
     gl_FragColor = vec4(col, alpha);
   }
 `;
@@ -99,7 +121,7 @@ export default function GroundFog() {
           // low opacity so it reads as a vapor wisp, not a painted grey floor.
           uTintInner: { value: new THREE.Color('#d6d2ca') },
           uTintOuter: { value: new THREE.Color('#3e3a34') },
-          uOpacity: { value: 0.32 },
+          uOpacity: { value: 0.42 },
         },
         vertexShader,
         fragmentShader,
@@ -128,12 +150,12 @@ export default function GroundFog() {
   return (
     <mesh
       ref={meshRef}
-      position={[0, 0.02, 0]}
+      position={[0, 0.45, 0]}
       rotation={[-Math.PI / 2, 0, 0]}
       renderOrder={1}
       frustumCulled={false}
     >
-      <planeGeometry args={[32, 32, 1, 1]} />
+      <planeGeometry args={[32, 32, 48, 48]} />
       <primitive ref={matRef} object={material} attach="material" />
     </mesh>
   );

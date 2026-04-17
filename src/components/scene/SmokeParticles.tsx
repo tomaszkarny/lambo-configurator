@@ -13,22 +13,24 @@ import { useConfigStore } from '@/store/useConfigStore';
  * Domain-warped 5-octave fBM carves organic silhouettes inside each sprite.
  */
 
-const COUNT_DESKTOP = 110;
-const COUNT_MOBILE = 55;
+const COUNT_DESKTOP = 140;
+const COUNT_MOBILE = 65;
 
-// Wider, off-center pocket — puffs billow both around and a touch over
-// the car, leaving the mid-hero pocket clear via the noise alpha, not radius.
-const POCKET_R_MIN = 1.2;
-const POCKET_R_MAX = 8.0;
-const POCKET_X_SCALE = 1.0;
-const POCKET_Z_SCALE = 1.2;
-// Ground-up rise: particles spawn hugging the floor and climb up.
+// Immersive pocket — puffs fill the whole volume between the camera and the
+// car. POCKET_R_MIN near 0 means particles can drift right in front of the
+// lens; POCKET_R_MAX extends past the car. POCKET_Z_SCALE stretches the
+// pocket along the camera axis so the viewer is surrounded, not just the car.
+const POCKET_R_MIN = 0.2;
+const POCKET_R_MAX = 10.0;
+const POCKET_X_SCALE = 1.3;
+const POCKET_Z_SCALE = 2.2;
+// Ground-biased rise but vertical spread up to eye level for immersion.
 const SPAWN_Y_MIN = -0.15;
-const SPAWN_Y_SPREAD = 0.35;
-const RISE_HEIGHT = 5.2;
+const SPAWN_Y_SPREAD = 2.2;
+const RISE_HEIGHT = 4.6;
 const LIFETIME_MIN = 13.0;
 const LIFETIME_MAX = 21.0;
-const SIZE_BASE = 6.6;
+const SIZE_BASE = 8.5;
 
 const vertexShader = /* glsl */ `
   attribute float aSpawnTime;
@@ -67,7 +69,7 @@ const vertexShader = /* glsl */ `
     // not cotton-ball cumulus clouds.
     float fadeIn = smoothstep(0.0, 0.18, age);
     float fadeOut = 1.0 - smoothstep(0.62, 1.0, age);
-    vAlpha = fadeIn * fadeOut * (0.22 + aSeed * 0.2);
+    vAlpha = fadeIn * fadeOut * (0.32 + aSeed * 0.25);
 
     // Gas expansion — less extreme since base size is already large
     float sizeGrowth = mix(0.5, 1.35, pow(age, 0.65));
@@ -75,7 +77,7 @@ const vertexShader = /* glsl */ `
 
     vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
     gl_PointSize = pointSize * uPixelRatio * (380.0 / max(-mvPos.z, 0.1));
-    gl_PointSize = clamp(gl_PointSize, 60.0, 1500.0);
+    gl_PointSize = clamp(gl_PointSize, 80.0, 1800.0);
     gl_Position = projectionMatrix * mvPos;
   }
 `;
@@ -147,8 +149,28 @@ const fragmentShader = /* glsl */ `
     float internalNoise = fbm(noiseCoord * 1.7 + 5.0);
     alpha *= (0.45 + internalNoise * 0.4);
 
-    // Warm grayscale mix — muted, not pure white (real smoke is mid-value)
+    // --- 3D volumetric shading (fake spherical normal from UV) ---
+    // Treat each puff as a sphere so light falls across its "volume"
+    // instead of every sprite being flat. This is the trick that makes
+    // billboard smoke read as 3D in film CG.
+    vec2 sUv = (gl_PointCoord - 0.5) * 2.0;
+    float h = 1.0 - dot(sUv, sUv);
+    vec3 puffNormal = vec3(sUv, sqrt(max(h, 0.0)));
+
+    // Key light from above-behind (classic rim+fill film smoke setup)
+    vec3 keyDir = normalize(vec3(0.25, 0.85, -0.4));
+    float keyLight = clamp(dot(puffNormal, keyDir), 0.0, 1.0);
+    // Fill light (ambient bounce from the floor)
+    vec3 fillDir = normalize(vec3(-0.2, -0.6, 0.7));
+    float fillLight = clamp(dot(puffNormal, fillDir), 0.0, 1.0) * 0.4;
+    // Rim from behind — thin bright edge where light wraps the puff
+    float rim = pow(1.0 - max(puffNormal.z, 0.0), 2.5) * 0.7;
+
+    float shade = 0.25 + keyLight * 0.75 + fillLight + rim;
+
+    // Warm grayscale mix modulated by the 3D shade
     vec3 col = mix(uTintOuter, uTintInner, smoothstep(0.1, 0.9, density));
+    col *= shade;
 
     // Subtle age-based darkening — older smoke dissipates cooler
     float lifeBrightness = 1.0 - vAge * 0.22;
