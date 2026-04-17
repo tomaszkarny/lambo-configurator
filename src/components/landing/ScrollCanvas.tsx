@@ -3,6 +3,13 @@
 import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import CarModel from '@/components/scene/CarModel';
+// Reveal experiments kept as fallback files on disk (not mounted):
+//   - AtmosphericFog  (Drei volumetric clouds — too soft for the intended drama)
+//   - ClothReveal  (5 cloth-sim iterations, none felt natural)
+//   - ParticleReveal  (cyan/magenta iridescent particles, felt cheap)
+//   - Sparkles (Drei dust motes — noise without intent)
+// Current hero direction: custom GPU smoke cloud wrapping the car.
+import SmokeParticles from '@/components/scene/SmokeParticles';
 import Lighting from '@/components/scene/Lighting';
 import Environment from '@/components/scene/Environment';
 import Floor from '@/components/scene/Floor';
@@ -39,7 +46,7 @@ export default function ScrollCanvas() {
           fov: 35,
           near: 0.1,
           far: 100,
-          position: [3.5, 1.8, 5],
+          position: [0, 1.9, 8.5],
         }}
         dpr={isMobile ? [1, 1] : [1, 1.5]}
         gl={{
@@ -47,11 +54,14 @@ export default function ScrollCanvas() {
           antialias: false,
           preserveDrawingBuffer: true,
           powerPreference: 'high-performance',
+          localClippingEnabled: true,
         }}
         shadows
       >
+        <fogExp2 attach="fog" args={['#0a1622', 0.04]} />
         <Suspense fallback={null}>
           <CarModel />
+          <SmokeParticles />
           <ScrollEffects />
           <Lighting />
           <Environment />

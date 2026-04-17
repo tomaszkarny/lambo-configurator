@@ -68,7 +68,7 @@ export default function ColorPicker() {
 
   return (
     <div>
-      <p className="text-[10px] tracking-widest text-white/50 uppercase mb-3">Color</p>
+      <p className="text-[10px] tracking-widest text-white/65 uppercase mb-3">Color</p>
       <div className="flex flex-wrap gap-2">
         {colors.map((swatch) => {
           const isActive = currentColor.toLowerCase() === swatch.hex.toLowerCase();
@@ -77,11 +77,12 @@ export default function ColorPicker() {
               key={swatch.hex}
               onClick={() => setColor(swatch.hex)}
               className={`
-                group relative w-8 h-8 rounded-full transition-all duration-200
+                group relative w-9 h-9 md:w-10 md:h-10 rounded-full transition-all duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]
                 ${isActive ? 'ring-2 ring-white/60 ring-offset-2 ring-offset-[#0a0a0a] scale-110' : 'hover:scale-105'}
               `}
               style={{ backgroundColor: swatch.hex }}
-              aria-label={swatch.name}
+              aria-label={`Select ${swatch.name}`}
+              aria-pressed={isActive}
               title={swatch.name}
             >
               {isActive && (

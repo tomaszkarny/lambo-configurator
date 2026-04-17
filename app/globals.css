@@ -4,6 +4,18 @@
   --background: #0a0a0a;
   --foreground: #ededed;
   --accent: #ff6600;
+
+  /* Z-index layering tokens — single source of truth. Consumed by JS
+     via inline styles or by Tailwind arbitrary values z-[var(--z-modal)]. */
+  --z-canvas: 0;
+  --z-content: 1;
+  --z-progress-bar: 30;
+  --z-overlay: 40;       /* ConfigPanel sidebar/drawer trigger */
+  --z-drawer: 45;        /* ConfigPanel mobile drawer body */
+  --z-finale: 50;        /* FinalReveal overlay */
+  --z-nav: 60;           /* NavHeader */
+  --z-nav-menu: 70;      /* NavOverlay (full-screen menu) */
+  --z-loading: 100;
 }
 
 @theme inline {

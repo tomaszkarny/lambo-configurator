@@ -8,11 +8,16 @@ export default function DesignSection() {
   const { features } = landingContent;
 
   return (
-    <section className="relative w-full pointer-events-none">
+    <section
+      className="relative w-full pointer-events-none"
+      role="region"
+      aria-label="Design Features"
+    >
       {features.map((feature, index) => (
-        <div
+        <article
           key={feature.title}
           className="min-h-screen flex items-center"
+          aria-labelledby={`feature-${index + 1}-title`}
         >
           <div className="w-full max-w-7xl mx-auto px-6 md:px-12">
             <div className="relative max-w-md">
@@ -28,14 +33,14 @@ export default function DesignSection() {
                   subtitle={`Feature ${String(index + 1).padStart(2, '0')}`}
                 />
                 <RevealText delay={0.2}>
-                  <p className="mt-4 text-base text-white/60 font-light leading-relaxed">
+                  <p className="mt-4 text-base text-white/72 font-light leading-relaxed">
                     {feature.description}
                   </p>
                 </RevealText>
               </div>
             </div>
           </div>
-        </div>
+        </article>
       ))}
     </section>
   );

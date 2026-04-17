@@ -22,16 +22,27 @@ export default function SectionHeading({
   return (
     <RevealText className={`${alignment} ${className ?? ''}`}>
       {subtitle && (
-        <p className="mb-3 text-[11px] tracking-[0.3em] uppercase text-white/55">
+        <p
+          className="mb-3 uppercase text-white/65"
+          style={{
+            fontFamily: 'var(--font-geist-mono)',
+            fontSize: 'clamp(0.68rem, 0.9vw, 0.75rem)',
+            letterSpacing: '0.32em',
+          }}
+        >
           {subtitle}
         </p>
       )}
       <h2
-        className={`text-3xl md:text-5xl font-light tracking-tight ${
+        className={`font-light tracking-tight ${
           gradient
-            ? 'bg-gradient-to-r from-white to-[#ff6600] bg-clip-text text-transparent'
+            ? 'bg-gradient-to-r from-white to-cyan-300 bg-clip-text text-transparent'
             : 'text-white'
         }`}
+        style={{
+          fontSize: 'clamp(1.85rem, 5.2vw, 4.25rem)',
+          lineHeight: 1.05,
+        }}
       >
         {title}
       </h2>

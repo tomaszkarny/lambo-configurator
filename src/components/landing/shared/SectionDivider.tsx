@@ -21,7 +21,7 @@ export default function SectionDivider({ className }: SectionDividerProps) {
         }}
         initial={{ scaleX: 0 }}
         animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-        transition={{ duration: 1, ease: [0.25, 0.4, 0, 1] }}
+        transition={{ duration: 0.75, ease: [0.25, 0.4, 0, 1] }}
       />
     </div>
   );

@@ -59,10 +59,10 @@ function applyZoneState(zone: ScrollZone, isMobile: boolean) {
   switch (zone) {
     case 'hero':
       store.batchUpdate({
-        bodyColor: '#1a1a1a',
-        accentColor: '#ff6600',
-        lightColor: '#ff6600',
-        lightIntensity: 5.0,
+        bodyColor: '#18181c',
+        accentColor: '#00e8ff',
+        lightColor: '#00e8ff',
+        lightIntensity: 3.5,
         wingsOpen: false,
       });
       store.resetInteractive();
@@ -231,6 +231,17 @@ export default function ScrollEffects() {
     if (zone !== prevZone.current) {
       applyZoneState(zone, isMobile);
       prevZone.current = zone;
+    }
+
+    // Continuous cyan energy pulse — "system awakening" mid-reveal.
+    // Peaks at p=0.06 for power-on moment, stays elevated through orbit.
+    if (zone === 'hero' && p >= 0.03 && p <= 0.10) {
+      const revealT = (p - 0.03) / 0.07;
+      const boost = Math.sin(revealT * Math.PI);
+      useConfigStore.getState().batchUpdate({
+        lightColor: '#00e8ff',
+        lightIntensity: 3.5 + boost * 2.5,
+      });
     }
 
     // Continuous finale bloom ramp: 0 at p=0.92, 1 at p=1.0.

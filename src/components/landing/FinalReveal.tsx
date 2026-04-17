@@ -36,19 +36,24 @@ export default function FinalReveal() {
         pb-[14vh] md:pb-[16vh]"
       style={{ opacity }}
     >
-      {/* Cinematic bottom-up darkening gradient for drama */}
+      {/* Cinematic bottom-up darkening gradient — stronger to mask footer wordmark behind */}
       <div
-        className="absolute inset-x-0 bottom-0 h-[65vh] pointer-events-none"
+        className="absolute inset-x-0 bottom-0 h-[85vh] pointer-events-none"
         style={{
           background:
-            'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0) 100%)',
+            'linear-gradient(to top, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.82) 30%, rgba(0,0,0,0.45) 65%, rgba(0,0,0,0) 100%)',
         }}
       />
 
-      {/* Headline */}
+      {/* Headline — light uppercase with wide tracking for finale drama */}
       <motion.h2
         className="relative font-extralight uppercase text-white text-center tracking-[0.18em]"
-        style={{ fontSize: 'clamp(2.5rem, 7vw, 6rem)', lineHeight: 0.95 }}
+        style={{
+          fontSize: 'clamp(2.5rem, 7vw, 6rem)',
+          lineHeight: 0.95,
+          textShadow:
+            '0 2px 36px rgba(0,0,0,0.85), 0 0 60px rgba(0,232,255,0.1)',
+        }}
         initial={reduced ? false : { y: 24 }}
         animate={{ y: revealed ? 0 : 24 }}
         transition={{ type: 'spring', damping: 22, stiffness: 120 }}
@@ -58,9 +63,15 @@ export default function FinalReveal() {
         NOW
       </motion.h2>
 
-      {/* Subtitle */}
+      {/* Subtitle — cyan mono mark */}
       <motion.p
-        className="relative mt-5 text-[11px] md:text-xs tracking-[0.35em] uppercase text-white/60"
+        className="relative mt-5 uppercase text-cyan-300/75"
+        style={{
+          fontFamily: 'var(--font-geist-mono)',
+          fontSize: 'clamp(0.65rem, 0.8vw, 0.75rem)',
+          letterSpacing: '0.4em',
+          textShadow: '0 0 14px rgba(0,232,255,0.22), 0 1px 10px rgba(0,0,0,0.85)',
+        }}
         initial={reduced ? false : { opacity: 0 }}
         animate={{ opacity: revealed ? 1 : 0 }}
         transition={{ duration: 0.5, delay: 0.15 }}

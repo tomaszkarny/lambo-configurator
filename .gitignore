@@ -39,6 +39,9 @@ yarn-error.log*
 # original blender/gltf source model
 /free__lamborghini_terzo_millennio
 
+# blender working files (large binaries, out-of-repo experiments)
+/blender/
+
 # planning docs
 lambo-configurator-plan.md
 

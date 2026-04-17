@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import { useConfigStore } from '@/store/useConfigStore';
+import { useScrollStore } from '@/store/useScrollStore';
 import { getMeshGroup } from '@/lib/mesh-classifier';
 import { materialPresets } from '@/config/materials';
 import { interactivePartDefs, allInteractiveParts } from '@/config/interactive-parts';
@@ -51,6 +52,9 @@ export default function CarModel() {
   const initialized = useRef(false);
   // Track original materials so cleanup can restore them (StrictMode safety)
   const originalMaterials = useRef<Map<THREE.Mesh, THREE.Material>>(new Map());
+
+  // Wrapper group ref — used for ambient idle breathing animation
+  const breathRef = useRef<THREE.Group>(null);
 
   // Interactive parts refs
   const partNodesRef = useRef<Map<InteractivePart, THREE.Object3D>>(new Map());
@@ -327,6 +331,26 @@ export default function CarModel() {
       );
     }
 
+    // Ambient idle breathing — subtle bob + sway, makes car feel "alive".
+    // Always on, very low amplitude (millimeter-scale) so it never distracts.
+    // Disabled in OrbitControls/configurator mode since user expects stillness.
+    const isCfg = useScrollStore.getState().isConfigurator;
+    if (breathRef.current && !isCfg) {
+      const time = state.clock.elapsedTime;
+      // Vertical bob — slow, rhythmic, ~3.5s period
+      breathRef.current.position.y = Math.sin(time * 1.8) * 0.012;
+      // Subtle pitch (front-back tilt) — even slower, like settling on suspension
+      breathRef.current.rotation.x = Math.sin(time * 0.7) * 0.0035;
+      // Imperceptible side-to-side roll
+      breathRef.current.rotation.z = Math.cos(time * 0.55 + 1.2) * 0.0025;
+      needsRender = true;
+    } else if (breathRef.current && isCfg) {
+      // Snap to rest in configurator mode
+      breathRef.current.position.y = 0;
+      breathRef.current.rotation.x = 0;
+      breathRef.current.rotation.z = 0;
+    }
+
     if (needsRender) {
       state.invalidate();
     }
@@ -347,7 +371,7 @@ export default function CarModel() {
   }
 
   return (
-    <group>
+    <group ref={breathRef}>
       <primitive object={scene} />
     </group>
   );

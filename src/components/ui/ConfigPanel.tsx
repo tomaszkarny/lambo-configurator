@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PartSelector from './PartSelector';
 import ColorPicker from './ColorPicker';
@@ -222,42 +222,7 @@ export default function ConfigPanel({ isMobile }: { isMobile: boolean }) {
 
   // Mobile: bottom drawer
   if (isMobile) {
-    return (
-      <>
-        {/* Drawer toggle */}
-        <button
-          onClick={() => setDrawerOpen(!drawerOpen)}
-          className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center
-            py-3 bg-[#111]/90 backdrop-blur-md border-t border-white/5"
-          aria-label="Toggle configuration panel"
-        >
-          <div className="w-10 h-1 bg-white/20 rounded-full" />
-        </button>
-
-        <AnimatePresence>
-          {drawerOpen && (
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 z-50 max-h-[70vh] overflow-y-auto
-                bg-[#111]/95 backdrop-blur-xl border-t border-white/5 rounded-t-2xl"
-            >
-              {/* Drag handle */}
-              <button
-                className="flex items-center justify-center py-3 cursor-pointer w-full bg-transparent border-none appearance-none"
-                onClick={() => setDrawerOpen(false)}
-                aria-label="Close configuration panel"
-              >
-                <div className="w-10 h-1 bg-white/20 rounded-full" />
-              </button>
-              {panelContent}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </>
-    );
+    return <MobileDrawer drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} panelContent={panelContent} />;
   }
 
   // Desktop: sidebar
@@ -265,10 +230,96 @@ export default function ConfigPanel({ isMobile }: { isMobile: boolean }) {
     <aside className="fixed top-0 right-0 bottom-0 z-40 w-[280px]
       bg-[#111]/80 backdrop-blur-xl border-l border-white/5
       overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10"
+      aria-label="Vehicle configuration"
     >
       <div className="pt-16">
         {panelContent}
       </div>
     </aside>
+  );
+}
+
+/**
+ * Mobile drawer with proper modal semantics + keyboard handling.
+ * - Escape key closes (parity with NavOverlay)
+ * - Focus moves into drawer on open, returns to trigger on close
+ * - role="dialog" + aria-modal for screen reader context
+ */
+function MobileDrawer({
+  drawerOpen,
+  setDrawerOpen,
+  panelContent,
+}: {
+  drawerOpen: boolean;
+  setDrawerOpen: (open: boolean) => void;
+  panelContent: ReactNode;
+}) {
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  // Escape closes; focus returns to trigger
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setDrawerOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    // Autofocus close button so Tab stays in drawer range
+    const raf = requestAnimationFrame(() => closeBtnRef.current?.focus());
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      cancelAnimationFrame(raf);
+    };
+  }, [drawerOpen, setDrawerOpen]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        onClick={() => setDrawerOpen(!drawerOpen)}
+        className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-center
+          py-3 bg-[#111]/90 backdrop-blur-md border-t border-white/5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        aria-label="Toggle configuration panel"
+        aria-expanded={drawerOpen}
+        aria-controls="config-drawer"
+      >
+        <div className="w-10 h-1 bg-white/20 rounded-full" />
+      </button>
+
+      <AnimatePresence>
+        {drawerOpen && (
+          <motion.div
+            ref={drawerRef}
+            id="config-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Vehicle configuration"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed bottom-0 left-0 right-0 z-50 max-h-[70vh] overflow-y-auto
+              bg-[#111]/95 backdrop-blur-xl border-t border-white/5 rounded-t-2xl"
+          >
+            <button
+              ref={closeBtnRef}
+              className="flex items-center justify-center py-3 cursor-pointer w-full bg-transparent border-none appearance-none focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 rounded"
+              onClick={() => {
+                setDrawerOpen(false);
+                triggerRef.current?.focus();
+              }}
+              aria-label="Close configuration panel"
+            >
+              <div className="w-10 h-1 bg-white/20 rounded-full" />
+            </button>
+            {panelContent}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

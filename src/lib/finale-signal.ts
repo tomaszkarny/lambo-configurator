@@ -16,3 +16,13 @@ export function setFinaleBloomT(v: number) {
 export function getFinaleBloomT() {
   return finaleBloomT;
 }
+
+let heroRevealBloomT = 0;
+
+export function setHeroRevealBloomT(v: number) {
+  heroRevealBloomT = v;
+}
+
+export function getHeroRevealBloomT() {
+  return heroRevealBloomT;
+}
