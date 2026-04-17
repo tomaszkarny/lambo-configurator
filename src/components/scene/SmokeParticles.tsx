@@ -31,7 +31,7 @@ const POCKET_Z_SCALE = 2.2;
 // Ground-biased rise but vertical spread up to eye level for immersion.
 const SPAWN_Y_MIN = -0.15;
 const SPAWN_Y_SPREAD = 2.2;
-const RISE_HEIGHT = 4.6;
+const RISE_HEIGHT = 2.6;
 const LIFETIME_MIN = 13.0;
 const LIFETIME_MAX = 21.0;
 const SIZE_BASE = 8.5;
@@ -215,8 +215,8 @@ export default function SmokeParticles() {
       const r = POCKET_R_MIN + Math.random() * (POCKET_R_MAX - POCKET_R_MIN);
       origins[i * 3] = r * Math.cos(theta) * POCKET_X_SCALE;
       origins[i * 3 + 1] = isGround
-        ? -0.05 + Math.random() * 1.05    // ground tier: 0.0 - 1.0m (visible under the hero eyeline)
-        : 1.0 + Math.random() * 1.6;      // rising tier: 1.0 - 2.6m
+        ? -0.05 + Math.random() * 0.7     // ground tier: 0.0 - 0.65m
+        : 0.55 + Math.random() * 1.1;     // rising tier: 0.55 - 1.65m
       origins[i * 3 + 2] = r * Math.sin(theta) * POCKET_Z_SCALE;
 
       spawnTimes[i] = Math.random() * LIFETIME_MAX;
