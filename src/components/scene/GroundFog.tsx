@@ -26,12 +26,13 @@ const vertexShader = /* glsl */ `
 
     // Layered wave displacement — after the -π/2 rotation on the mesh,
     // local +Z becomes world +Y, so pushing pos.z lifts the vapor upward.
-    // Two sine layers at different frequencies + a slow fbm-like beat
-    // make the fog wisp up, not sit as a painted carpet.
-    float wave1 = sin(uv.x * 5.2 + uTime * 0.35) * 0.45;
-    float wave2 = sin(uv.y * 4.1 - uTime * 0.28) * 0.38;
-    float wave3 = sin((uv.x + uv.y) * 3.1 + uTime * 0.19) * 0.3;
-    float lift = wave1 + wave2 + wave3;
+    // Aggressive amplitude + multiple frequencies give the vapor real
+    // volume — crests rise 2-3m off the floor like rolling smoke.
+    float wave1 = sin(uv.x * 6.5 + uTime * 0.45) * 1.4;
+    float wave2 = sin(uv.y * 4.7 - uTime * 0.35) * 1.15;
+    float wave3 = sin((uv.x + uv.y) * 3.4 + uTime * 0.22) * 0.85;
+    float wave4 = sin((uv.x - uv.y * 1.3) * 8.1 + uTime * 0.55) * 0.5;
+    float lift = wave1 + wave2 + wave3 + wave4;
 
     pos.z += lift;
     vLift = lift;

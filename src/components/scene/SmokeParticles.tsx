@@ -13,8 +13,12 @@ import { useConfigStore } from '@/store/useConfigStore';
  * Domain-warped 5-octave fBM carves organic silhouettes inside each sprite.
  */
 
-const COUNT_DESKTOP = 140;
-const COUNT_MOBILE = 65;
+const COUNT_DESKTOP = 170;
+const COUNT_MOBILE = 80;
+// Fraction of particles biased to the floor (heavy ground smoke) vs
+// rising mid/high puffs. ~55% hugging the ground reads as a fog-machine
+// emission on the floor, not a painted plane.
+const GROUND_FRACTION = 0.55;
 
 // Immersive pocket — puffs fill the whole volume between the camera and the
 // car. POCKET_R_MIN near 0 means particles can drift right in front of the
@@ -197,21 +201,29 @@ export default function SmokeParticles() {
     const lifetimes = new Float32Array(COUNT);
     const seeds = new Float32Array(COUNT);
 
+    const groundCount = Math.floor(COUNT * GROUND_FRACTION);
     for (let i = 0; i < COUNT; i++) {
       positions[i * 3] = 0;
       positions[i * 3 + 1] = 0;
       positions[i * 3 + 2] = 0;
 
-      // Ring spawn — wider ellipsoidal distribution around car
+      // Bimodal ring spawn — half the particles hug the floor (the
+      // "ground smoke" layer that replaces the old flat GroundFog plane),
+      // the rest sit between knee-height and eye-level and rise through.
+      const isGround = i < groundCount;
       const theta = Math.random() * Math.PI * 2;
       const r = POCKET_R_MIN + Math.random() * (POCKET_R_MAX - POCKET_R_MIN);
       origins[i * 3] = r * Math.cos(theta) * POCKET_X_SCALE;
-      origins[i * 3 + 1] = SPAWN_Y_MIN + Math.random() * SPAWN_Y_SPREAD;
+      origins[i * 3 + 1] = isGround
+        ? -0.05 + Math.random() * 1.05    // ground tier: 0.0 - 1.0m (visible under the hero eyeline)
+        : 1.0 + Math.random() * 1.6;      // rising tier: 1.0 - 2.6m
       origins[i * 3 + 2] = r * Math.sin(theta) * POCKET_Z_SCALE;
 
       spawnTimes[i] = Math.random() * LIFETIME_MAX;
-      lifetimes[i] =
-        LIFETIME_MIN + Math.random() * (LIFETIME_MAX - LIFETIME_MIN);
+      // Ground tier lives longer and moves slower via its seed offset
+      lifetimes[i] = isGround
+        ? LIFETIME_MIN + 4 + Math.random() * (LIFETIME_MAX - LIFETIME_MIN)
+        : LIFETIME_MIN + Math.random() * (LIFETIME_MAX - LIFETIME_MIN);
       seeds[i] = Math.random();
     }
 
