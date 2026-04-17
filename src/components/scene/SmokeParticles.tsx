@@ -7,35 +7,27 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useConfigStore } from '@/store/useConfigStore';
 
 /**
- * GPU smoke particle system — real smoke physics (spawn → rise → expand → fade).
- *
- * Each particle has a procedural lifecycle in vertex shader:
- *  - aSpawnTime / aLifetime control birth and death
- *  - Position = origin + windDrift + verticalRise*velocity (slows over age)
- *  - Size grows from 0.3 → 2.0 over lifetime (gas expansion)
- *  - Alpha triangle envelope: 0.15s fade-in, plateau, gradual fade-out
- *
- * Fragment shader paints organic smoke puffs with noise-distorted radial
- * falloff — looks like real photographic smoke, not flat circles.
- *
- * Particles auto-respawn when they die (modulo math on age) — endless flow
- * without per-frame buffer updates from CPU.
+ * Cinematic smoke — studio fog machine / dry-ice look.
+ * Fewer, larger, slower-drifting puffs with noise-field alpha and warm
+ * grayscale palette. Zero rim highlight (that read as underwater bubbles).
+ * Domain-warped 5-octave fBM carves organic silhouettes inside each sprite.
  */
 
-const COUNT_DESKTOP = 320;
-const COUNT_MOBILE = 140;
+const COUNT_DESKTOP = 90;
+const COUNT_MOBILE = 45;
 
-// Hero pocket — particles spawn in a ring around the car, leaving the center
-// clear so the subject stays crisp. r ∈ [2.6, 5.6], ellipsoidal (X tighter, Z wider).
-const POCKET_R_MIN = 2.6;
-const POCKET_R_MAX = 5.6;
-const POCKET_X_SCALE = 0.85;
-const POCKET_Z_SCALE = 1.1;
-const SPAWN_Y = 0.0;
-const RISE_HEIGHT = 3.5;
-const LIFETIME_MIN = 6.0;
-const LIFETIME_MAX = 11.0;
-const SIZE_BASE = 0.6;
+// Wider, off-center pocket — puffs billow both around and a touch over
+// the car, leaving the mid-hero pocket clear via the noise alpha, not radius.
+const POCKET_R_MIN = 1.6;
+const POCKET_R_MAX = 7.5;
+const POCKET_X_SCALE = 1.0;
+const POCKET_Z_SCALE = 1.2;
+const SPAWN_Y_MIN = -0.2;
+const SPAWN_Y_SPREAD = 1.8;
+const RISE_HEIGHT = 2.4;
+const LIFETIME_MIN = 11.0;
+const LIFETIME_MAX = 18.0;
+const SIZE_BASE = 2.8;
 
 const vertexShader = /* glsl */ `
   attribute float aSpawnTime;
@@ -52,36 +44,37 @@ const vertexShader = /* glsl */ `
   void main() {
     vSeed = aSeed;
 
-    // Loop the lifecycle — when particle dies, respawn as if new
     float rawAge = uTime - aSpawnTime;
-    float age = mod(rawAge, aLifetime) / aLifetime; // 0..1
+    float age = mod(rawAge, aLifetime) / aLifetime;
     vAge = age;
 
-    // Vertical rise — fast at first, decelerating (drag)
-    float rise = pow(age, 0.55) * ${RISE_HEIGHT.toFixed(1)};
+    // Vertical rise — eased, organic
+    float rise = pow(age, 0.48) * ${RISE_HEIGHT.toFixed(2)};
 
-    // Horizontal wind drift — sways over time, increases with age
-    float windPhase = aSeed * 6.2831853 + uTime * 0.18;
+    // Slow horizontal drift — amplitude low so puffs don't flee the hero pocket
+    float windPhase = aSeed * 6.2831853 + uTime * 0.08;
     vec3 wind = vec3(
-      sin(windPhase) * 0.55 + cos(windPhase * 0.7) * 0.35,
+      sin(windPhase) * 0.22 + cos(windPhase * 0.7) * 0.14,
       0.0,
-      cos(windPhase * 0.83) * 0.45 + sin(windPhase * 0.6) * 0.3
+      cos(windPhase * 0.83) * 0.18 + sin(windPhase * 0.6) * 0.12
     ) * age;
 
     vec3 pos = position + aOriginOffset + wind + vec3(0.0, rise, 0.0);
 
-    // Alpha envelope: fade in (0..0.12), plateau (0.12..0.55), fade out (0.55..1)
-    float fadeIn = smoothstep(0.0, 0.12, age);
-    float fadeOut = 1.0 - smoothstep(0.55, 1.0, age);
-    vAlpha = fadeIn * fadeOut * (0.7 + aSeed * 0.4);
+    // Symmetric envelope — longer plateau for cinematic dwell.
+    // Peak alpha kept low (0.18-0.38) so puffs read as diffuse smoke,
+    // not cotton-ball cumulus clouds.
+    float fadeIn = smoothstep(0.0, 0.18, age);
+    float fadeOut = 1.0 - smoothstep(0.62, 1.0, age);
+    vAlpha = fadeIn * fadeOut * (0.22 + aSeed * 0.2);
 
-    // Size grows over lifetime — gas expansion
-    float sizeGrowth = mix(0.35, 1.7, pow(age, 0.7));
+    // Gas expansion — less extreme since base size is already large
+    float sizeGrowth = mix(0.5, 1.35, pow(age, 0.65));
     float pointSize = ${SIZE_BASE.toFixed(2)} * sizeGrowth * uSizeScale * (0.85 + aSeed * 0.5);
 
     vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
     gl_PointSize = pointSize * uPixelRatio * (380.0 / max(-mvPos.z, 0.1));
-    gl_PointSize = clamp(gl_PointSize, 4.0, 260.0);
+    gl_PointSize = clamp(gl_PointSize, 24.0, 620.0);
     gl_Position = projectionMatrix * mvPos;
   }
 `;
@@ -91,12 +84,10 @@ const fragmentShader = /* glsl */ `
   uniform float uTime;
   uniform vec3 uTintInner;
   uniform vec3 uTintOuter;
-  uniform vec3 uRimColor;
   varying float vAge;
   varying float vAlpha;
   varying float vSeed;
 
-  // Lightweight 3D value noise
   float hash(vec3 p) {
     p = fract(p * vec3(443.897, 441.423, 437.195));
     p += dot(p, p.yzx + 19.19);
@@ -116,14 +107,14 @@ const fragmentShader = /* glsl */ `
     );
   }
 
-  // Multi-octave noise — gives smoke its turbulent texture
+  // 5-octave fBM for turbulent smoke structure
   float fbm(vec3 p) {
     float v = 0.0;
     float a = 0.55;
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 5; i++) {
       v += a * vnoise(p);
-      p = p * 2.13 + vec3(11.7, 7.1, 13.3);
-      a *= 0.5;
+      p = p * 2.07 + vec3(11.7, 7.1, 13.3);
+      a *= 0.52;
     }
     return v;
   }
@@ -131,33 +122,38 @@ const fragmentShader = /* glsl */ `
   void main() {
     vec2 uv = gl_PointCoord - 0.5;
 
-    // Noise-distorted distance — breaks the perfect circle, makes it look organic
-    vec3 noiseCoord = vec3(uv * 4.5, vSeed * 7.0 + uTime * 0.08 + vAge * 1.5);
-    float distort = fbm(noiseCoord) * 0.18 - 0.09;
-    float dist = length(uv) + distort;
-    if (dist > 0.5) discard;
+    // Domain warping — distort UV coords before sampling density.
+    // This is what breaks the circle into organic puff silhouettes.
+    vec2 warp = vec2(
+      fbm(vec3(uv * 2.0, vSeed * 3.0 + uTime * 0.05)),
+      fbm(vec3(uv * 2.0 + 12.0, vSeed * 3.0 + uTime * 0.05))
+    ) - 0.5;
+    uv += warp * 0.35;
 
-    // Soft falloff — gaussian-like, no hard edge
-    float soft = smoothstep(0.5, 0.05, dist);
-    float density = pow(soft, 1.6);
+    // Noise-field alpha — puffy cloud shape, not a circle
+    vec3 noiseCoord = vec3(uv * 2.4, vSeed * 7.0 + uTime * 0.04 + vAge * 0.8);
+    float density = fbm(noiseCoord);
 
-    // Internal turbulence detail — gives the puff varying density inside
-    float internalNoise = fbm(noiseCoord * 1.7);
-    density *= (0.55 + internalNoise * 0.65);
+    // Radial falloff — gentle, long gradient to give soft smoke edge
+    float radial = 1.0 - smoothstep(0.05, 0.48, length(uv));
 
-    // Color: deep blue-grey core, slightly brighter rim catches scene light
-    vec3 col = mix(uTintOuter, uTintInner, density);
+    // Wide smoothstep on density = soft transition instead of binary
+    // popcorn-clump alpha. Cinematic smoke has diffuse edges everywhere.
+    float alpha = smoothstep(0.28, 0.72, density) * radial;
+    if (alpha < 0.005) discard;
 
-    // Rim accent — edges of puff catch scene cyan light, mimics subsurface
-    float rim = smoothstep(0.18, 0.45, dist) * (1.0 - smoothstep(0.45, 0.5, dist));
-    col += uRimColor * rim * 0.4;
+    // Gentle internal variation — smoke should not look like cauliflower
+    float internalNoise = fbm(noiseCoord * 1.7 + 5.0);
+    alpha *= (0.45 + internalNoise * 0.4);
 
-    // Lifetime brightness curve — newer particles slightly hotter
-    float lifeBrightness = 1.0 - vAge * 0.3;
+    // Warm grayscale mix — muted, not pure white (real smoke is mid-value)
+    vec3 col = mix(uTintOuter, uTintInner, smoothstep(0.1, 0.9, density));
+
+    // Subtle age-based darkening — older smoke dissipates cooler
+    float lifeBrightness = 1.0 - vAge * 0.22;
     col *= lifeBrightness;
 
-    float alpha = density * vAlpha;
-    gl_FragColor = vec4(col, alpha);
+    gl_FragColor = vec4(col, alpha * vAlpha);
   }
 `;
 
@@ -179,19 +175,17 @@ export default function SmokeParticles() {
     const seeds = new Float32Array(COUNT);
 
     for (let i = 0; i < COUNT; i++) {
-      // Static base position is origin — vertex shader handles motion
       positions[i * 3] = 0;
       positions[i * 3 + 1] = 0;
       positions[i * 3 + 2] = 0;
 
-      // Ring spawn — ellipsoidal distribution around car, hero pocket stays clear
+      // Ring spawn — wider ellipsoidal distribution around car
       const theta = Math.random() * Math.PI * 2;
       const r = POCKET_R_MIN + Math.random() * (POCKET_R_MAX - POCKET_R_MIN);
       origins[i * 3] = r * Math.cos(theta) * POCKET_X_SCALE;
-      origins[i * 3 + 1] = SPAWN_Y + Math.random() * 0.3;
+      origins[i * 3 + 1] = SPAWN_Y_MIN + Math.random() * SPAWN_Y_SPREAD;
       origins[i * 3 + 2] = r * Math.sin(theta) * POCKET_Z_SCALE;
 
-      // Stagger spawn times so particles aren't all in sync
       spawnTimes[i] = Math.random() * LIFETIME_MAX;
       lifetimes[i] =
         LIFETIME_MIN + Math.random() * (LIFETIME_MAX - LIFETIME_MIN);
@@ -204,7 +198,7 @@ export default function SmokeParticles() {
     geo.setAttribute('aLifetime', new THREE.BufferAttribute(lifetimes, 1));
     geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
 
-    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1.5, 0), 14);
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1.5, 0), 16);
     return geo;
   }, [COUNT]);
 
@@ -217,9 +211,8 @@ export default function SmokeParticles() {
             value: Math.min(window.devicePixelRatio || 1, 1.5),
           },
           uSizeScale: { value: 1.0 },
-          uTintInner: { value: new THREE.Color('#0c2935') },
-          uTintOuter: { value: new THREE.Color('#03101a') },
-          uRimColor: { value: new THREE.Color('#3aa8c8') },
+          uTintInner: { value: new THREE.Color('#8a867e') }, // muted warm mid-grey
+          uTintOuter: { value: new THREE.Color('#141210') }, // warm near-black
         },
         vertexShader,
         fragmentShader,
@@ -253,7 +246,7 @@ export default function SmokeParticles() {
       ref={pointsRef}
       geometry={geometry}
       frustumCulled={false}
-      renderOrder={1}
+      renderOrder={2}
     >
       <primitive ref={matRef} object={material} attach="material" />
     </points>

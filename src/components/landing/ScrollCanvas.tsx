@@ -10,6 +10,7 @@ import CarModel from '@/components/scene/CarModel';
 //   - Sparkles (Drei dust motes — noise without intent)
 // Current hero direction: custom GPU smoke cloud wrapping the car.
 import SmokeParticles from '@/components/scene/SmokeParticles';
+import GroundFog from '@/components/scene/GroundFog';
 import Lighting from '@/components/scene/Lighting';
 import Environment from '@/components/scene/Environment';
 import Floor from '@/components/scene/Floor';
@@ -61,6 +62,7 @@ export default function ScrollCanvas() {
         <fogExp2 attach="fog" args={['#0a1622', 0.04]} />
         <Suspense fallback={null}>
           <CarModel />
+          <GroundFog />
           <SmokeParticles />
           <ScrollEffects />
           <Lighting />
