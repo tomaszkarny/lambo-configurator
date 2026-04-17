@@ -64,20 +64,22 @@ const fragmentShader = /* glsl */ `
     vec2 centered = vUv - 0.5;
 
     // Two scrolling layers — different scales and directions for organic flow
-    vec2 flow1 = centered * 2.2 + vec2(uTime * 0.018, uTime * 0.012);
-    vec2 flow2 = centered * 5.5 + vec2(-uTime * 0.009, uTime * 0.022);
+    vec2 flow1 = centered * 2.6 + vec2(uTime * 0.022, uTime * 0.014);
+    vec2 flow2 = centered * 6.5 + vec2(-uTime * 0.011, uTime * 0.026);
     float density = fbm(flow1) * 0.7 + fbm(flow2) * 0.4;
-    density = smoothstep(0.35, 0.78, density);
+    // Tighter threshold → puffs of steam with gaps, not a continuous floor.
+    density = smoothstep(0.48, 0.85, density);
 
-    // Radial fade at plane edges — hides the hard square boundary
-    float edgeFade = 1.0 - smoothstep(0.22, 0.5, length(centered));
+    // Stronger radial fade — steam pools hug the center, not the edges
+    float edgeFade = 1.0 - smoothstep(0.14, 0.42, length(centered));
 
     // Car hole — small clear disc in the middle so auto doesn't drown
-    float carHole = smoothstep(0.035, 0.105, length(centered));
+    float carHole = smoothstep(0.045, 0.13, length(centered));
 
     float alpha = density * edgeFade * carHole * uOpacity;
-    if (alpha < 0.005) discard;
+    if (alpha < 0.004) discard;
 
+    // Steam: brighter and cooler than the heavy smoke puffs above.
     vec3 col = mix(uTintOuter, uTintInner, density);
     gl_FragColor = vec4(col, alpha);
   }
@@ -93,9 +95,11 @@ export default function GroundFog() {
       new THREE.ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
-          uTintInner: { value: new THREE.Color('#c8c4bd') },
-          uTintOuter: { value: new THREE.Color('#1a1814') },
-          uOpacity: { value: 0.55 },
+          // Steam palette: bright highlight + mid warm-grey floor (never black),
+          // low opacity so it reads as a vapor wisp, not a painted grey floor.
+          uTintInner: { value: new THREE.Color('#d6d2ca') },
+          uTintOuter: { value: new THREE.Color('#3e3a34') },
+          uOpacity: { value: 0.32 },
         },
         vertexShader,
         fragmentShader,

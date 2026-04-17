@@ -13,21 +13,22 @@ import { useConfigStore } from '@/store/useConfigStore';
  * Domain-warped 5-octave fBM carves organic silhouettes inside each sprite.
  */
 
-const COUNT_DESKTOP = 90;
-const COUNT_MOBILE = 45;
+const COUNT_DESKTOP = 110;
+const COUNT_MOBILE = 55;
 
 // Wider, off-center pocket — puffs billow both around and a touch over
 // the car, leaving the mid-hero pocket clear via the noise alpha, not radius.
-const POCKET_R_MIN = 1.6;
-const POCKET_R_MAX = 7.5;
+const POCKET_R_MIN = 1.2;
+const POCKET_R_MAX = 8.0;
 const POCKET_X_SCALE = 1.0;
 const POCKET_Z_SCALE = 1.2;
-const SPAWN_Y_MIN = -0.2;
-const SPAWN_Y_SPREAD = 1.8;
-const RISE_HEIGHT = 2.4;
-const LIFETIME_MIN = 11.0;
-const LIFETIME_MAX = 18.0;
-const SIZE_BASE = 2.8;
+// Ground-up rise: particles spawn hugging the floor and climb up.
+const SPAWN_Y_MIN = -0.15;
+const SPAWN_Y_SPREAD = 0.35;
+const RISE_HEIGHT = 5.2;
+const LIFETIME_MIN = 13.0;
+const LIFETIME_MAX = 21.0;
+const SIZE_BASE = 6.6;
 
 const vertexShader = /* glsl */ `
   attribute float aSpawnTime;
@@ -74,7 +75,7 @@ const vertexShader = /* glsl */ `
 
     vec4 mvPos = modelViewMatrix * vec4(pos, 1.0);
     gl_PointSize = pointSize * uPixelRatio * (380.0 / max(-mvPos.z, 0.1));
-    gl_PointSize = clamp(gl_PointSize, 24.0, 620.0);
+    gl_PointSize = clamp(gl_PointSize, 60.0, 1500.0);
     gl_Position = projectionMatrix * mvPos;
   }
 `;
