@@ -184,12 +184,34 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+// Scene-reactive palette anchors — the mist lerps BETWEEN these two
+// cool neutrals (highlight + shadow) TOWARD the current scene lightColor.
+// Picking non-white / non-black anchors keeps the mist readable as smoke
+// even when the scene light is extreme (e.g. pure red or pure yellow).
+const BASE_LIGHT_HEX = '#e6f0f4'; // almost-white cool
+const BASE_DARK_HEX = '#08111a'; // deep cool dark
+// How far each anchor lerps toward scene lightColor — inner pulls further
+// (reads the tint clearly), outer stays mostly dark so smoke keeps depth.
+const SCENE_MIX_INNER = 0.45;
+const SCENE_MIX_OUTER = 0.15;
+// Exponential damping stiffness for the tint lerp. k=3 ≈ 330ms response.
+const TINT_DAMPING_K = 3.0;
+
 export default function SmokeParticles() {
   const reduced = useReducedMotion();
   const isMobile = useConfigStore((s) => s.isMobile);
   const pointsRef = useRef<THREE.Points>(null);
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const startTime = useRef<number | null>(null);
+
+  // Scene-reactive tint machinery — current/target colors lerped in useFrame.
+  const baseLight = useMemo(() => new THREE.Color(BASE_LIGHT_HEX), []);
+  const baseDark = useMemo(() => new THREE.Color(BASE_DARK_HEX), []);
+  const currentInner = useRef(new THREE.Color('#d8ecf0'));
+  const currentOuter = useRef(new THREE.Color('#0a1620'));
+  const targetInner = useRef(new THREE.Color());
+  const targetOuter = useRef(new THREE.Color());
+  const sceneLightColor = useRef(new THREE.Color());
 
   const COUNT = isMobile ? COUNT_MOBILE : COUNT_DESKTOP;
 
@@ -246,8 +268,11 @@ export default function SmokeParticles() {
             value: Math.min(window.devicePixelRatio || 1, 1.5),
           },
           uSizeScale: { value: 1.0 },
-          uTintInner: { value: new THREE.Color('#8a867e') }, // muted warm mid-grey
-          uTintOuter: { value: new THREE.Color('#141210') }, // warm near-black
+          // Initial values — scene-reactive lerp in useFrame overwrites
+          // these every frame based on useConfigStore.lightColor, so pick
+          // a neutral cool cyan so the first frame is already on-brand.
+          uTintInner: { value: new THREE.Color('#d8ecf0') },
+          uTintOuter: { value: new THREE.Color('#0a1620') },
         },
         vertexShader,
         fragmentShader,
@@ -259,7 +284,7 @@ export default function SmokeParticles() {
     []
   );
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const pts = pointsRef.current;
     const mat = matRef.current;
     if (!pts || !mat) return;
@@ -274,6 +299,28 @@ export default function SmokeParticles() {
       startTime.current = state.clock.elapsedTime;
     }
     mat.uniforms.uTime.value = state.clock.elapsedTime;
+
+    // Scene-reactive palette: read lightColor imperatively (no hook
+    // selectors in useFrame — per CLAUDE.md gotcha), compute target
+    // tints by lerping neutral anchors toward the scene light, then
+    // exponentially damp current toward target for smooth transitions
+    // across zone boundaries.
+    const lightHex = useConfigStore.getState().lightColor;
+    sceneLightColor.current.set(lightHex);
+
+    targetInner.current
+      .copy(baseLight)
+      .lerp(sceneLightColor.current, SCENE_MIX_INNER);
+    targetOuter.current
+      .copy(baseDark)
+      .lerp(sceneLightColor.current, SCENE_MIX_OUTER);
+
+    const t = 1 - Math.exp(-TINT_DAMPING_K * delta);
+    currentInner.current.lerp(targetInner.current, t);
+    currentOuter.current.lerp(targetOuter.current, t);
+
+    mat.uniforms.uTintInner.value.copy(currentInner.current);
+    mat.uniforms.uTintOuter.value.copy(currentOuter.current);
   });
 
   return (
