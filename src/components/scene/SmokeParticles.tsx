@@ -13,12 +13,17 @@ import { useConfigStore } from '@/store/useConfigStore';
  * Domain-warped 5-octave fBM carves organic silhouettes inside each sprite.
  */
 
-const COUNT_DESKTOP = 170;
-const COUNT_MOBILE = 80;
+const COUNT_DESKTOP = 210;
+const COUNT_MOBILE = 95;
 // Fraction of particles biased to the floor (heavy ground smoke) vs
-// rising mid/high puffs. ~55% hugging the ground reads as a fog-machine
-// emission on the floor, not a painted plane.
-const GROUND_FRACTION = 0.55;
+// rising mid/high puffs. ~45% hugging the ground; mid + far tiers share
+// the remaining 55% so the whole scene reads as immersed in atmosphere.
+const GROUND_FRACTION = 0.45;
+// Far-tier fraction of the *non-ground* particles — large, low-alpha,
+// slow-drifting puffs far from camera that blur into the scene fog.
+// Over half of the non-ground budget so the whole scene reads as foggy,
+// not just the subject pocket.
+const FAR_FRACTION = 0.55;
 
 // Immersive pocket — puffs fill the whole volume between the camera and the
 // car. POCKET_R_MIN near 0 means particles can drift right in front of the
@@ -28,6 +33,14 @@ const POCKET_R_MIN = 0.2;
 const POCKET_R_MAX = 10.0;
 const POCKET_X_SCALE = 1.3;
 const POCKET_Z_SCALE = 2.2;
+// Far-tier pocket — bigger radius, full vertical range. Large distant
+// puffs dissolve into the scene fog, reading as "the whole scene is in fog".
+// Now wraps 360° around the camera with generous Y range so mist surrounds
+// the viewer on every axis, not just the backdrop.
+const FAR_R_MIN = 6.0;
+const FAR_R_MAX = 22.0;
+const FAR_Y_MIN = -0.5;
+const FAR_Y_MAX = 5.5;
 // Ground-biased rise but vertical spread up to eye level for immersion.
 const SPAWN_Y_MIN = -0.15;
 const SPAWN_Y_SPREAD = 2.2;
@@ -58,12 +71,15 @@ const vertexShader = /* glsl */ `
     // Vertical rise — eased, organic
     float rise = pow(age, 0.48) * ${RISE_HEIGHT.toFixed(2)};
 
-    // Slow horizontal drift — amplitude low so puffs don't flee the hero pocket
-    float windPhase = aSeed * 6.2831853 + uTime * 0.08;
+    // Live, visible drift — stronger amplitude + circular swirl component
+    // so the mist clearly churns around the subject instead of hanging still.
+    float windPhase = aSeed * 6.2831853 + uTime * 0.18;
+    float swirlPhase = aSeed * 9.42 + uTime * 0.11;
+    float swirlRadius = 0.8 + aSeed * 0.6;
     vec3 wind = vec3(
-      sin(windPhase) * 0.22 + cos(windPhase * 0.7) * 0.14,
-      0.0,
-      cos(windPhase * 0.83) * 0.18 + sin(windPhase * 0.6) * 0.12
+      sin(windPhase) * 0.55 + cos(windPhase * 0.7) * 0.32 + cos(swirlPhase) * swirlRadius,
+      sin(swirlPhase * 0.4 + aSeed * 3.0) * 0.22,
+      cos(windPhase * 0.83) * 0.42 + sin(windPhase * 0.6) * 0.28 + sin(swirlPhase) * swirlRadius
     ) * age;
 
     vec3 pos = position + aOriginOffset + wind + vec3(0.0, rise, 0.0);
@@ -224,26 +240,41 @@ export default function SmokeParticles() {
     const seeds = new Float32Array(COUNT);
 
     const groundCount = Math.floor(COUNT * GROUND_FRACTION);
+    const nonGround = COUNT - groundCount;
+    const farCount = Math.floor(nonGround * FAR_FRACTION);
+    const farStart = COUNT - farCount;
+
     for (let i = 0; i < COUNT; i++) {
       positions[i * 3] = 0;
       positions[i * 3 + 1] = 0;
       positions[i * 3 + 2] = 0;
 
-      // Bimodal ring spawn — half the particles hug the floor (the
-      // "ground smoke" layer that replaces the old flat GroundFog plane),
-      // the rest sit between knee-height and eye-level and rise through.
+      // Tri-modal spawn:
+      //   • ground tier  — hugs the floor, dense fog-machine emission
+      //   • rising tier  — eye-level drift between ground and camera
+      //   • far tier     — large distant puffs that blend into scene fog
+      //                    (this is what reads as "the whole scene is foggy")
       const isGround = i < groundCount;
+      const isFar = i >= farStart;
       const theta = Math.random() * Math.PI * 2;
-      const r = POCKET_R_MIN + Math.random() * (POCKET_R_MAX - POCKET_R_MIN);
-      origins[i * 3] = r * Math.cos(theta) * POCKET_X_SCALE;
-      origins[i * 3 + 1] = isGround
-        ? -0.05 + Math.random() * 0.7     // ground tier: 0.0 - 0.65m
-        : 0.55 + Math.random() * 1.1;     // rising tier: 0.55 - 1.65m
-      origins[i * 3 + 2] = r * Math.sin(theta) * POCKET_Z_SCALE;
+
+      if (isFar) {
+        const r = FAR_R_MIN + Math.random() * (FAR_R_MAX - FAR_R_MIN);
+        origins[i * 3] = r * Math.cos(theta) * POCKET_X_SCALE;
+        origins[i * 3 + 1] = FAR_Y_MIN + Math.random() * (FAR_Y_MAX - FAR_Y_MIN);
+        origins[i * 3 + 2] = r * Math.sin(theta) * POCKET_Z_SCALE;
+      } else {
+        const r = POCKET_R_MIN + Math.random() * (POCKET_R_MAX - POCKET_R_MIN);
+        origins[i * 3] = r * Math.cos(theta) * POCKET_X_SCALE;
+        origins[i * 3 + 1] = isGround
+          ? -0.05 + Math.random() * 0.7    // ground tier: 0.0 - 0.65m
+          : 0.55 + Math.random() * 1.1;    // rising tier: 0.55 - 1.65m
+        origins[i * 3 + 2] = r * Math.sin(theta) * POCKET_Z_SCALE;
+      }
 
       spawnTimes[i] = Math.random() * LIFETIME_MAX;
-      // Ground tier lives longer and moves slower via its seed offset
-      lifetimes[i] = isGround
+      // Far & ground tiers live longer — slow, persistent atmospheric layer.
+      lifetimes[i] = isGround || isFar
         ? LIFETIME_MIN + 4 + Math.random() * (LIFETIME_MAX - LIFETIME_MIN)
         : LIFETIME_MIN + Math.random() * (LIFETIME_MAX - LIFETIME_MIN);
       seeds[i] = Math.random();
