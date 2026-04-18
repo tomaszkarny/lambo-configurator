@@ -16,9 +16,9 @@ import { useConfigStore } from '@/store/useConfigStore';
 const COUNT_DESKTOP = 210;
 const COUNT_MOBILE = 95;
 // Fraction of particles biased to the floor (heavy ground smoke) vs
-// rising mid/high puffs. ~45% hugging the ground; mid + far tiers share
-// the remaining 55% so the whole scene reads as immersed in atmosphere.
-const GROUND_FRACTION = 0.45;
+// rising mid/high puffs. ~60% hugging the ground for a dense floor fog
+// layer; mid + far tiers share the remaining 40%.
+const GROUND_FRACTION = 0.6;
 // Far-tier fraction of the *non-ground* particles — large, low-alpha,
 // slow-drifting puffs far from camera that blur into the scene fog.
 // Over half of the non-ground budget so the whole scene reads as foggy,
@@ -53,6 +53,7 @@ const vertexShader = /* glsl */ `
   attribute float aSpawnTime;
   attribute float aLifetime;
   attribute float aSeed;
+  attribute float aRiseScale;
   attribute vec3 aOriginOffset;
   uniform float uTime;
   uniform float uPixelRatio;
@@ -68,8 +69,9 @@ const vertexShader = /* glsl */ `
     float age = mod(rawAge, aLifetime) / aLifetime;
     vAge = age;
 
-    // Vertical rise — eased, organic
-    float rise = pow(age, 0.48) * ${RISE_HEIGHT.toFixed(2)};
+    // Vertical rise — eased, organic. Per-particle rise scale lets the
+    // ground tier stay hugging the floor while mid/far tiers climb normally.
+    float rise = pow(age, 0.48) * ${RISE_HEIGHT.toFixed(2)} * aRiseScale;
 
     // Live, visible drift — stronger amplitude + circular swirl component
     // so the mist clearly churns around the subject instead of hanging still.
@@ -238,6 +240,7 @@ export default function SmokeParticles() {
     const spawnTimes = new Float32Array(COUNT);
     const lifetimes = new Float32Array(COUNT);
     const seeds = new Float32Array(COUNT);
+    const riseScales = new Float32Array(COUNT);
 
     const groundCount = Math.floor(COUNT * GROUND_FRACTION);
     const nonGround = COUNT - groundCount;
@@ -267,7 +270,7 @@ export default function SmokeParticles() {
         const r = POCKET_R_MIN + Math.random() * (POCKET_R_MAX - POCKET_R_MIN);
         origins[i * 3] = r * Math.cos(theta) * POCKET_X_SCALE;
         origins[i * 3 + 1] = isGround
-          ? -0.05 + Math.random() * 0.7    // ground tier: 0.0 - 0.65m
+          ? -0.1 + Math.random() * 1.1     // ground tier: -0.1 - 1.0m (thick floor band)
           : 0.55 + Math.random() * 1.1;    // rising tier: 0.55 - 1.65m
         origins[i * 3 + 2] = r * Math.sin(theta) * POCKET_Z_SCALE;
       }
@@ -278,6 +281,10 @@ export default function SmokeParticles() {
         ? LIFETIME_MIN + 4 + Math.random() * (LIFETIME_MAX - LIFETIME_MIN)
         : LIFETIME_MIN + Math.random() * (LIFETIME_MAX - LIFETIME_MIN);
       seeds[i] = Math.random();
+
+      // Rise scale: ground puffs barely climb (keeps the heavy floor fog
+      // layer stable), rising puffs climb fully, far puffs lift gently.
+      riseScales[i] = isGround ? 0.25 : isFar ? 0.55 : 1.0;
     }
 
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -285,6 +292,7 @@ export default function SmokeParticles() {
     geo.setAttribute('aSpawnTime', new THREE.BufferAttribute(spawnTimes, 1));
     geo.setAttribute('aLifetime', new THREE.BufferAttribute(lifetimes, 1));
     geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+    geo.setAttribute('aRiseScale', new THREE.BufferAttribute(riseScales, 1));
 
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 1.5, 0), 16);
     return geo;
