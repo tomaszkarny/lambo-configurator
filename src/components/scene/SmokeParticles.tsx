@@ -155,21 +155,23 @@ const fragmentShader = /* glsl */ `
     ) - 0.5;
     uv += warp * 0.35;
 
-    // Noise-field alpha — puffy cloud shape, not a circle
-    vec3 noiseCoord = vec3(uv * 2.4, vSeed * 7.0 + uTime * 0.04 + vAge * 0.8);
+    // Noise-field alpha — lower-frequency noise so silhouettes are broader
+    // (fewer visible sub-puffs inside each billboard, easier to merge).
+    vec3 noiseCoord = vec3(uv * 1.6, vSeed * 7.0 + uTime * 0.04 + vAge * 0.8);
     float density = fbm(noiseCoord);
 
-    // Radial falloff — gentle, long gradient to give soft smoke edge
-    float radial = 1.0 - smoothstep(0.05, 0.48, length(uv));
+    // Very long radial falloff — no hard boundary; puffs bleed into each other
+    float radial = 1.0 - smoothstep(0.0, 0.5, length(uv));
 
-    // Wide smoothstep on density = soft transition instead of binary
-    // popcorn-clump alpha. Cinematic smoke has diffuse edges everywhere.
-    float alpha = smoothstep(0.28, 0.72, density) * radial;
-    if (alpha < 0.005) discard;
+    // Very wide alpha smoothstep = almost no threshold, mostly gradient.
+    // This is what glues neighbouring puffs into one continuous volume.
+    float alpha = smoothstep(0.12, 0.88, density) * radial;
+    if (alpha < 0.003) discard;
 
-    // Gentle internal variation — smoke should not look like cauliflower
-    float internalNoise = fbm(noiseCoord * 1.7 + 5.0);
-    alpha *= (0.45 + internalNoise * 0.4);
+    // Minimal internal variation — uniform-ish density reads as one mass,
+    // not as many independent clumps.
+    float internalNoise = fbm(noiseCoord * 1.4 + 5.0);
+    alpha *= (0.72 + internalNoise * 0.18);
 
     // --- 3D volumetric shading (fake spherical normal from UV) ---
     // Treat each puff as a sphere so light falls across its "volume"
@@ -179,16 +181,16 @@ const fragmentShader = /* glsl */ `
     float h = 1.0 - dot(sUv, sUv);
     vec3 puffNormal = vec3(sUv, sqrt(max(h, 0.0)));
 
-    // Key light from above-behind (classic rim+fill film smoke setup)
+    // Softer 3D shading — lower contrast so individual puffs don't pop
+    // visually; adjacent puffs blend into one mass instead of showing rims.
     vec3 keyDir = normalize(vec3(0.25, 0.85, -0.4));
     float keyLight = clamp(dot(puffNormal, keyDir), 0.0, 1.0);
-    // Fill light (ambient bounce from the floor)
     vec3 fillDir = normalize(vec3(-0.2, -0.6, 0.7));
-    float fillLight = clamp(dot(puffNormal, fillDir), 0.0, 1.0) * 0.4;
-    // Rim from behind — thin bright edge where light wraps the puff
-    float rim = pow(1.0 - max(puffNormal.z, 0.0), 2.5) * 0.7;
+    float fillLight = clamp(dot(puffNormal, fillDir), 0.0, 1.0) * 0.3;
+    // Very subtle rim — strong rims were making each puff look self-contained
+    float rim = pow(1.0 - max(puffNormal.z, 0.0), 3.0) * 0.25;
 
-    float shade = 0.25 + keyLight * 0.75 + fillLight + rim;
+    float shade = 0.55 + keyLight * 0.45 + fillLight + rim;
 
     // Warm grayscale mix modulated by the 3D shade
     vec3 col = mix(uTintOuter, uTintInner, smoothstep(0.1, 0.9, density));
